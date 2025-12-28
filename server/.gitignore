@@ -1,0 +1,74 @@
+# =========================
+# Dependencies
+# =========================
+node_modules/
+
+# =========================
+# Build output
+# =========================
+dist/
+build/
+
+# =========================
+# TypeScript
+# =========================
+*.tsbuildinfo
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# =========================
+# Nodemon
+# =========================
+.nodemon.json
+
+# =========================
+# Prisma
+# =========================
+prisma/dev.db
+prisma/*.db
+prisma/*.db-journal
+
+# =========================
+# Docker
+# =========================
+docker-data/
+.docker/
+docker-compose.override.yml
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# IntelliJ / WebStorm
+.idea/
+
+# =========================
+# Coverage / Testing
+# =========================
+coverage/
+
+# =========================
+# Temporary files
+# =========================
+.tmp/
+temp/
