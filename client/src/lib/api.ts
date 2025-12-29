@@ -6,19 +6,21 @@ export const api = axios.create({
 });
 
 let isRefreshing = false;
-let refreshQueue: (() => void)[] = [];
+let refreshQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (error?: unknown) => void;
+}> = [];
 
-const processQueue = () => {
-  refreshQueue.forEach((cb) => cb());
+const processQueue = (error: unknown = null) => {
+  refreshQueue.forEach((promise) => {
+    if (error) {
+      promise.reject(error);
+    } else {
+      promise.resolve();
+    }
+  });
   refreshQueue = [];
 };
-
-const AUTH_EXCLUDED_ROUTES = [
-  "/auth/login",
-  "/auth/register",
-  "/auth/refresh",
-  "/auth/logout",
-];
 
 api.interceptors.response.use(
   (res) => res,
@@ -27,38 +29,37 @@ api.interceptors.response.use(
       | (AxiosError["config"] & { _retry?: boolean })
       | undefined;
 
-    if (!originalRequest || !error.response) {
+    if (!originalRequest || error.response?.status !== 401) {
       return Promise.reject(error);
     }
 
-    const isAuthRoute = AUTH_EXCLUDED_ROUTES.some((route) =>
-      originalRequest.url?.includes(route)
-    );
-
-    // ❌ DO NOT refresh on auth routes
-    if (error.response.status === 401 && !originalRequest._retry && !isAuthRoute) {
-      if (isRefreshing) {
-        return new Promise((resolve) => {
-          refreshQueue.push(() => resolve(api(originalRequest)));
-        });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        await api.post("/auth/refresh");
-        processQueue();
-        return api(originalRequest);
-      } catch (refreshError) {
-        // ✅ Hard logout
-        window.location.replace("/login");
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
+    // ❌ Never refresh refresh itself
+    if (originalRequest.url?.includes("/auth/refresh")) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    if (originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        refreshQueue.push({ resolve, reject });
+      }).then(() => api(originalRequest));
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    try {
+      await api.post("/auth/refresh"); // cookie updated
+      processQueue();
+      return api(originalRequest); // retry original
+    } catch (err) {
+      processQueue(err);
+      return Promise.reject(err); // ❌ NO redirect here
+    } finally {
+      isRefreshing = false;
+    }
   }
 );

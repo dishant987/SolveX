@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Difficulty } from "../../generated/prisma/enums.js";
 
 export const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -66,6 +67,27 @@ export const CreateProblemSchema = z.object({
   testCases: z.array(TestCaseSchema).min(1),
   codeSnippets: CodeSnippetSchema,
   referenceSolution: ReferenceSolutionSchema,
+});
+
+export const GetProblemsQuerySchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(50).default(10),
+
+  search: z.string().optional(),
+
+  difficulty: z.nativeEnum(Difficulty).optional(),
+
+  tags: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(",") : undefined)),
+
+  sortBy: z.enum(["createdAt", "title", "difficulty"]).default("createdAt"),
+  order: z.enum(["asc", "desc"]).default("desc"),
+});
+
+export const GetProblemByIdSchema = z.object({
+  id: z.string().uuid(),
 });
 
 export type CreateProblemInput = z.infer<typeof CreateProblemSchema>;

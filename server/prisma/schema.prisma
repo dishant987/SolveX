@@ -28,6 +28,8 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  problemSolveds ProblemSolved[]
 }
 
 model AuthAccount {
@@ -61,25 +63,40 @@ enum AuthProvider {
 }
 
 model Problem {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   title       String
   description String
   difficulty  Difficulty
   tags        String[]
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  examples Json
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  examples    Json
   constraints String
-  hints String?
-  editorial String?
+  hints       String?
+  editorial   String?
 
-  testCases Json
-  codeSnippets Json
+  testCases         Json
+  codeSnippets      Json
   referenceSolution Json
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  problemSolveds ProblemSolved[]
 }
+
+model ProblemSolved {
+  id        String   @id @default(uuid())
+  userId    String
+  problemId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem   Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, problemId])
+}
+
 enum Difficulty {
   EASY
   MEDIUM

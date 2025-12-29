@@ -11,4 +11,21 @@ router.post(
   problemController.createProblem.bind(problemController)
 );
 
+// public routes
+router.get(
+  "/problems",
+  problemController.getAllProblems.bind(problemController)
+);
+
+router.get(
+  "/problems/:id",
+  authenticate,
+  problemController.getProblemById.bind(problemController)
+);
+router.delete(
+  "/problems/:id",
+  authenticate,
+  problemController.deleteProblem.bind(problemController)
+);
+
 export default router;

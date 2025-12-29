@@ -13,17 +13,10 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useApiMutation } from '@/lib/typed-mutation';
 import { publicApi } from '@/lib/public-api';
 import { useAuth } from '@/hooks/useAuth';
-import type { LoginResponse, RouterContext } from '@/types/types';
+import type { LoginResponse } from '@/types/types';
 import { useEffect } from 'react';
 
 export const Route = createFileRoute('/(auth)/login/')({
-  beforeLoad: ({ context }: { context: RouterContext }) => {
-    if (context.auth?.user) {
-      throw redirect({
-        to: '/',
-      });
-    }
-  },
   component: Login,
   validateSearch: (search: Record<string, unknown>) => {
     return {
@@ -37,11 +30,11 @@ function Login() {
 
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setUser, fetchUser, user } = useAuth();
+  const { setUser, fetchUser, isAuthenticated } = useAuth();
   const search = useSearch({ from: '/(auth)/login/' });
   useEffect(() => {
-    if (user) navigate({ to: '/', replace: true });
-  }, [user, navigate]);
+    if (isAuthenticated) navigate({ to: '/', replace: true });
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     if (search.error) {
@@ -101,6 +94,7 @@ function Login() {
         description: 'You have successfully logged in.',
       });
       setUser(data.user)
+      fetchUser();
       navigate({ to: '/', replace: true });
     },
 

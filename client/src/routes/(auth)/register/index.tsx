@@ -12,7 +12,7 @@ import { useApiMutation } from '@/lib/typed-mutation';
 import { registerSchema, type RegisterFormData } from '@/lib/validations';
 import type { RegisterResponse } from '@/types/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createFileRoute, Link,  useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Check, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -23,15 +23,14 @@ export const Route = createFileRoute('/(auth)/register/')({
 
 function Register() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const { setUser, fetchUser ,isAuthenticated } = useAuth();
-   const navigate = useNavigate();
+  const { setUser, isAuthenticated, fetchUser } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   useEffect(() => {
-    console.log(isAuthenticated);
     if (isAuthenticated) {
       navigate({ to: '/', replace: true });
     }
-  }, [isAuthenticated,navigate]);
+  }, [isAuthenticated, navigate]);
 
   const {
     register,
@@ -52,32 +51,33 @@ function Register() {
     { label: 'One number', met: /[0-9]/.test(password) },
   ];
 
-    const registerMutation = useApiMutation<RegisterResponse, RegisterFormData>({
-      mutationFn: (data) =>
-        publicApi.post('/auth/register', data).then((data) => data.data),
-  
-      onSuccess: (data) => {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully logged in.',
-        });
-        setUser(data.data.user);
-        navigate({ to: '/', replace: true });
-      },
-  
-      onError: (error) => {
-        const apiError = error.response?.data;
-        console.log(apiError);
-        // Global error
-        toast({
-          variant: 'destructive',
-          title: 'Registration failed',
-          description:
-            apiError?.message ?? 'Invalid email or password',
-          duration: 5000,
-        });
-      },
-    });
+  const registerMutation = useApiMutation<RegisterResponse, RegisterFormData>({
+    mutationFn: (data) =>
+      publicApi.post('/auth/register', data).then((data) => data.data),
+
+    onSuccess: (data) => {
+      toast({
+        title: 'Welcome back!',
+        description: 'You have successfully logged in.',
+      });
+      setUser(data.data.user);
+      fetchUser();
+      navigate({ to: '/', replace: true });
+    },
+
+    onError: (error) => {
+      const apiError = error.response?.data;
+      console.log(apiError);
+      // Global error
+      toast({
+        variant: 'destructive',
+        title: 'Registration failed',
+        description:
+          apiError?.message ?? 'Invalid email or password',
+        duration: 5000,
+      });
+    },
+  });
 
   const onSubmit = async (data: RegisterFormData) => {
     registerMutation.mutate(data);
@@ -216,9 +216,9 @@ function Register() {
           variant="auth"
           size="lg"
           className="w-full"
-          disabled={registerMutation.isPending || !isValid || !agreedToTerms }
+          disabled={registerMutation.isPending || !isValid || !agreedToTerms}
         >
-          {registerMutation.isPending  ? (
+          {registerMutation.isPending ? (
             <>
               <LoadingSpinner size="sm" />
               Creating account...

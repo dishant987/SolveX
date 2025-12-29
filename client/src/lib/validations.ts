@@ -41,71 +41,87 @@ export const profileSchema = z.object({
   email: z.string().email("Invalid email"),
 });
 
-export const DifficultyEnum = z.enum(['EASY', 'MEDIUM', 'HARD']);
+export const DifficultyEnum = z.enum(["EASY", "MEDIUM", "HARD"]);
 
 export const ExampleSchema = z.object({
-  input: z.string().min(1, 'Input is required'),
-  output: z.string().min(1, 'Output is required'),
+  input: z.string().min(1, "Input is required"),
+  output: z.string().min(1, "Output is required"),
   explanation: z.string().optional(),
 });
 
 export const TestCaseSchema = z.object({
-  input: z.string().min(1, 'Test case input is required'),
-  output: z.string().min(1, 'Test case output is required'),
+  input: z.string().min(1, "Test case input is required"),
+  output: z.string().min(1, "Test case output is required"),
 });
 
 // Supported languages validation
-const supportedLanguages = ['javascript', 'python', 'java'] as const;
+const supportedLanguages = ["javascript", "python", "java"] as const;
 
 const CodeSnippetSchema = z.record(
   z.enum(supportedLanguages),
-  z.string().min(1, 'Code snippet cannot be empty')
+  z.string().min(1, "Code snippet cannot be empty")
 );
 
 const ReferenceSolutionSchema = z.record(
   z.enum(supportedLanguages),
-  z.string().min(1, 'Reference solution is required')
+  z.string().min(1, "Reference solution is required")
 );
 
 export const createProblemSchema = z.object({
-  title: z.string()
-    .min(3, 'Title must be at least 3 characters')
-    .max(150, 'Title must not exceed 150 characters')
-    .regex(/^[a-zA-Z0-9\s\-]+$/, 'Title can only contain letters, numbers, spaces, and hyphens'),
+  title: z
+    .string()
+    .min(3, "Title must be at least 3 characters")
+    .max(150, "Title must not exceed 150 characters")
+    .regex(
+      /^[a-zA-Z0-9\s\-]+$/,
+      "Title can only contain letters, numbers, spaces, and hyphens"
+    ),
 
-  description: z.string()
-    .min(10, 'Description must be at least 10 characters')
-    .max(5000, 'Description must not exceed 5000 characters'),
+  description: z
+    .string()
+    .min(10, "Description must be at least 10 characters")
+    .max(5000, "Description must not exceed 5000 characters"),
 
   difficulty: DifficultyEnum,
 
+  tags: z
+    .array(
+      z.object({
+        value: z.string().min(1),
+      })
+    )
+    .min(1, "At least one tag is required")
+    .max(10, "Maximum 10 tags allowed"),
 
-  examples: z.array(ExampleSchema)
-    .min(1, 'At least one example is required')
-    .max(10, 'Maximum 10 examples allowed'),
+  examples: z
+    .array(ExampleSchema)
+    .min(1, "At least one example is required")
+    .max(10, "Maximum 10 examples allowed"),
 
-  constraints: z.string()
-    .min(5, 'Constraints are required')
-    .max(1000, 'Constraints must not exceed 1000 characters'),
+  constraints: z
+    .string()
+    .min(5, "Constraints are required")
+    .max(1000, "Constraints must not exceed 1000 characters"),
 
   hints: z.string().optional(),
   editorial: z.string().optional(),
 
-  testCases: z.array(TestCaseSchema)
-    .min(1, 'At least one test case is required')
-    .max(50, 'Maximum 50 test cases allowed'),
+  testCases: z
+    .array(TestCaseSchema)
+    .min(1, "At least one test case is required")
+    .max(50, "Maximum 50 test cases allowed"),
 
   codeSnippets: CodeSnippetSchema.refine(
-    (obj) => supportedLanguages.every(lang => lang in obj),
-    { message: 'Code snippets required for all supported languages' }
+    (obj) => supportedLanguages.every((lang) => lang in obj),
+    { message: "Code snippets required for all supported languages" }
   ),
 
   referenceSolution: ReferenceSolutionSchema.refine(
-    (obj) => supportedLanguages.every(lang => lang in obj),
-    { message: 'Reference solutions required for all supported languages' }
+    (obj) => supportedLanguages.every((lang) => lang in obj),
+    { message: "Reference solutions required for all supported languages" }
   ).refine(
-    (obj) => Object.values(obj).every(code => code.trim().length > 10),
-    { message: 'Reference solutions must be valid code' }
+    (obj) => Object.values(obj).every((code) => code.trim().length > 10),
+    { message: "Reference solutions must be valid code" }
   ),
 });
 

@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import type { Difficulty } from "../../generated/prisma/enums.js";
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -30,3 +31,13 @@ export const Judge0LanguageMap = {
   java: { id: 62, name: "Java (OpenJDK 13.0.1)" },
   typescript: { id: 74, name: "TypeScript (3.7.4)" },
 } as const;
+
+export interface GetAllProblemsParams {
+  page: number;
+  limit: number;
+  search?: string | undefined;
+  difficulty?: Difficulty | undefined;
+  tags?: string[] | undefined;
+  sortBy: "createdAt" | "title" | "difficulty";
+  order: "asc" | "desc";
+}

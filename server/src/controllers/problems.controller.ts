@@ -1,7 +1,11 @@
 import type { Response } from "express";
 import { handleError } from "../lib/errorhandlers.js";
 import { Judge0LanguageMap, type AuthRequest } from "../types/type.js";
-import { CreateProblemSchema } from "../validators/validator.js";
+import {
+  CreateProblemSchema,
+  GetProblemByIdSchema,
+  GetProblemsQuerySchema,
+} from "../validators/validator.js";
 import { Judge0Service } from "../services/judge0.service.js";
 import { ProblemService } from "../services/problem.service.js";
 import { wrapCode } from "../lib/wrapReferenceSolution.js";
@@ -82,6 +86,91 @@ export class ProblemsController {
         data: problem,
       });
     } catch (error) {
+      handleError(error, res);
+    }
+  }
+
+  async getAllProblems(req: AuthRequest, res: Response) {
+    try {
+      const query = GetProblemsQuerySchema.parse(req.query);
+
+      const result = await problemService.getAllProblems(query);
+
+      return res.status(200).json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+
+  async getProblemById(req: AuthRequest, res: Response) {
+    try {
+      const user = req.user!;
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+      const { id } = GetProblemByIdSchema.parse(req.params);
+
+      const problem = await problemService.getProblemById(id,user?.id);
+
+      return res.status(200).json({
+        success: true,
+        data: problem,
+      });
+    } catch (error: any) {
+      if (error.message === "PROBLEM_NOT_FOUND") {
+        return res.status(404).json({
+          success: false,
+          message: "Problem not found",
+        });
+      }
+      handleError(error, res);
+    }
+  }
+
+  async deleteProblem(req: AuthRequest, res: Response) {
+    try {
+      const user = req.user!;
+      if (!user || user.role !== "ADMIN") {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+      const { id } = GetProblemByIdSchema.parse(req.params);
+      console.log(id);
+      const problem = await problemService.getProblemById(id);
+      if (problem === null) {
+        return res.status(404).json({
+          success: false,
+          message: "Problem not found",
+        });
+      }
+      if (problem?.userId !== user.
+        id) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Forbidden: You do not have permission to delete this problem.",
+        });
+      }
+      const deletedProblem = await problemService.deleteProblem(id);
+      if (deletedProblem === null) {
+        return res.status(404).json({
+          success: false,
+          message: "Problem not found",
+        });
+      }
+      return res.status(200).json({
+        success: true,
+        data: problem,
+      });
+    } catch (error: any) {
       handleError(error, res);
     }
   }

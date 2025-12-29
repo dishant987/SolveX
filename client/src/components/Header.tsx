@@ -29,7 +29,7 @@ export const Header = () => {
   const [logoutOpen, setLogoutOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, loading, logout } = useAuth()
   const { toast } = useToast();
   const fullName = user ? `${user.firstName} ${user.lastName}` : ""
   const isAdmin = user?.role === "ADMIN"
@@ -64,6 +64,15 @@ export const Header = () => {
       setIsLoggingOut(false)
     }
   }
+
+  if (loading) {
+    return (
+      <header className="h-14 sm:h-16 border-b bg-background" />
+    )
+  }
+
+
+
 
   return (
     <header

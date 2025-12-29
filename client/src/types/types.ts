@@ -12,7 +12,9 @@ export interface User {
 export interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
+
   loading: boolean;
+  setAuthStatus: React.Dispatch<React.SetStateAction<"loading" | "authenticated" | "unauthenticated">>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   logout: () => void;
   fetchUser: () => Promise<void>;

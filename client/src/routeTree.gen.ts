@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProblemsIndexRouteImport } from './routes/problems/index'
 import { Route as ProblemsCreateRouteImport } from './routes/problems/create'
+import { Route as ProblemsIdRouteImport } from './routes/problems/$id'
 import { Route as authRegisterIndexRouteImport } from './routes/(auth)/register/index'
 import { Route as authLoginIndexRouteImport } from './routes/(auth)/login/index'
 
@@ -42,6 +43,11 @@ const ProblemsCreateRoute = ProblemsCreateRouteImport.update({
   path: '/problems/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProblemsIdRoute = ProblemsIdRouteImport.update({
+  id: '/problems/$id',
+  path: '/problems/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const authRegisterIndexRoute = authRegisterIndexRouteImport.update({
   id: '/(auth)/register/',
   path: '/register/',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/profile': typeof ProfileRoute
+  '/problems/$id': typeof ProblemsIdRoute
   '/problems/create': typeof ProblemsCreateRoute
   '/problems': typeof ProblemsIndexRoute
   '/login': typeof authLoginIndexRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/profile': typeof ProfileRoute
+  '/problems/$id': typeof ProblemsIdRoute
   '/problems/create': typeof ProblemsCreateRoute
   '/problems': typeof ProblemsIndexRoute
   '/login': typeof authLoginIndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/profile': typeof ProfileRoute
+  '/problems/$id': typeof ProblemsIdRoute
   '/problems/create': typeof ProblemsCreateRoute
   '/problems/': typeof ProblemsIndexRoute
   '/(auth)/login/': typeof authLoginIndexRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/profile'
+    | '/problems/$id'
     | '/problems/create'
     | '/problems'
     | '/login'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/profile'
+    | '/problems/$id'
     | '/problems/create'
     | '/problems'
     | '/login'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/profile'
+    | '/problems/$id'
     | '/problems/create'
     | '/problems/'
     | '/(auth)/login/'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   ProfileRoute: typeof ProfileRoute
+  ProblemsIdRoute: typeof ProblemsIdRoute
   ProblemsCreateRoute: typeof ProblemsCreateRoute
   ProblemsIndexRoute: typeof ProblemsIndexRoute
   authLoginIndexRoute: typeof authLoginIndexRoute
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProblemsCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/problems/$id': {
+      id: '/problems/$id'
+      path: '/problems/$id'
+      fullPath: '/problems/$id'
+      preLoaderRoute: typeof ProblemsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(auth)/register/': {
       id: '/(auth)/register/'
       path: '/register'
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   ProfileRoute: ProfileRoute,
+  ProblemsIdRoute: ProblemsIdRoute,
   ProblemsCreateRoute: ProblemsCreateRoute,
   ProblemsIndexRoute: ProblemsIndexRoute,
   authLoginIndexRoute: authLoginIndexRoute,

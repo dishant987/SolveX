@@ -8,12 +8,12 @@ import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { useApiMutation } from '@/lib/typed-mutation';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  AlertCircle, 
-  Check, 
-  Code, 
-  HelpCircle, 
-  Plus, 
+import {
+  AlertCircle,
+  Check,
+  Code,
+  HelpCircle,
+  Plus,
   Trash2,
   FileText,
   Lightbulb,
@@ -165,31 +165,32 @@ const sampleStringProblem = {
 };
 
 export function CreateProblemPage() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeLanguage, setActiveLanguage] = useState('javascript');
   const [activeReferenceLang, setActiveReferenceLang] = useState('javascript');
   const [sampleType, setSampleType] = useState('DP');
-  const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN' && !user) {
-      navigate('/');
+    if (!isAuthenticated) {
+      navigate({ to: '/' });
+      return;
     }
-  }, [user, navigate]);
+    if (user?.role !== 'ADMIN') {
+      navigate({to: '/'});
+    }
+  }, [user, navigate, isAuthenticated]);
 
   const {
     control,
     register,
     handleSubmit,
     watch,
-    getValues,
-    setValue,
     reset,
     trigger,
-    formState: { errors, isValid, isDirty },
+    formState: { errors, isValid },
   } = useForm<CreateProblemFormData>({
     resolver: zodResolver(createProblemSchema),
     defaultValues: {
@@ -197,6 +198,7 @@ export function CreateProblemPage() {
       description: '',
       difficulty: 'MEDIUM',
       examples: [{ input: '', output: '', explanation: '' }],
+      tags: [],
       constraints: '',
       hints: '',
       editorial: '',
@@ -234,6 +236,16 @@ export function CreateProblemPage() {
     name: 'testCases',
   });
 
+  const {
+    fields: tagFields,
+    append: appendTag,
+    remove: removeTag,
+  } = useFieldArray({
+    control,
+    name: 'tags',
+  });
+
+
   // Enhanced validation with real-time tag validation
   useEffect(() => {
     const subscription = watch((value) => {
@@ -265,22 +277,19 @@ export function CreateProblemPage() {
   });
 
   const handleTagAdd = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
-    }
+    const value = tagInput.trim();
+    if (!value) return;
+
+    appendTag({ value });
+    setTagInput('');
   };
 
-  const handleTagRemove = (index: number) => {
-    setTags(tags.filter((_, i) => i !== index));
-  };
 
   const loadSampleData = () => {
     const sampleData = sampleType === 'DP' ? sampleDPProblem : sampleStringProblem;
-    
-    setTags(sampleData.tags);
+
     replaceTestCases(sampleData.testCases);
-    
+
     reset({
       title: sampleData.title,
       description: sampleData.description,
@@ -292,6 +301,7 @@ export function CreateProblemPage() {
       testCases: sampleData.testCases,
       codeSnippets: sampleData.codeSnippets,
       referenceSolution: sampleData.referenceSolution,
+      tags: sampleData.tags.map(tag => ({ value: tag })),
     });
 
     toast({
@@ -312,16 +322,17 @@ export function CreateProblemPage() {
       return;
     }
 
-    // Validate tags
+    const tags = data.tags.map(t => t.value);
+
     if (tags.length === 0) {
       toast({
         variant: 'destructive',
         title: '🏷️ Tags required',
         description: 'Please add at least one tag for the problem.',
-        duration: 5000,
       });
       return;
     }
+
 
     // Validate each tag
     const invalidTags = tags.filter(tag => tag.trim().length === 0);
@@ -354,7 +365,7 @@ export function CreateProblemPage() {
       // Combine with tags
       const completeData = {
         ...validationResult.data,
-        tags: tags,
+        tags: validationResult.data.tags.map(t => t.value),
       };
 
       createProblemMutation.mutate(completeData);
@@ -418,13 +429,14 @@ export function CreateProblemPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
+              {/* Title */}
+              <div>
                 <Label htmlFor="title" className="text-lg font-semibold">
                   Title *
                 </Label>
                 <Input
                   id="title"
-                  {...register('title')}
+                  {...register("title")}
                   placeholder="Enter problem title"
                   className="mt-2 text-lg"
                   aria-invalid={!!errors.title}
@@ -437,25 +449,7 @@ export function CreateProblemPage() {
                 )}
               </div>
 
-              <div className="md:col-span-2">
-                <Label htmlFor="description" className="text-lg font-semibold">
-                  Description *
-                </Label>
-                <Textarea
-                  id="description"
-                  {...register('description')}
-                  placeholder="Enter problem description"
-                  className="mt-2 min-h-32 text-base resize-y"
-                  aria-invalid={!!errors.description}
-                />
-                {errors.description && (
-                  <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.description.message}
-                  </p>
-                )}
-              </div>
-
+              {/* Difficulty */}
               <div>
                 <Label htmlFor="difficulty" className="text-lg font-semibold">
                   Difficulty *
@@ -464,35 +458,26 @@ export function CreateProblemPage() {
                   name="difficulty"
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <SelectTrigger className="mt-2" aria-invalid={!!errors.difficulty}>
+                    <Select onValueChange={field.onChange} value={field.value}  >
+                      <SelectTrigger
+                        className="mt-2"
+                        aria-invalid={!!errors.difficulty}
+                      >
                         <SelectValue placeholder="Select difficulty" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="EASY">
-                          <Badge
-                            variant="secondary"
-                            className="bg-green-100 text-green-800 hover:bg-green-100"
-                          >
+                          <Badge className="bg-green-100 text-green-800">
                             Easy
                           </Badge>
                         </SelectItem>
                         <SelectItem value="MEDIUM">
-                          <Badge
-                            variant="secondary"
-                            className="bg-amber-100 text-amber-800 hover:bg-amber-100"
-                          >
+                          <Badge className="bg-amber-100 text-amber-800">
                             Medium
                           </Badge>
                         </SelectItem>
                         <SelectItem value="HARD">
-                          <Badge
-                            variant="secondary"
-                            className="bg-red-100 text-red-800 hover:bg-red-100"
-                          >
+                          <Badge className="bg-red-100 text-red-800">
                             Hard
                           </Badge>
                         </SelectItem>
@@ -507,7 +492,28 @@ export function CreateProblemPage() {
                   </p>
                 )}
               </div>
+
+              {/* Description */}
+              <div className="md:col-span-2">
+                <Label htmlFor="description" className="text-lg font-semibold">
+                  Description *
+                </Label>
+                <Textarea
+                  id="description"
+                  {...register("description")}
+                  placeholder="Enter problem description"
+                  className="mt-2 min-h-36 text-base resize-y"
+                  aria-invalid={!!errors.description}
+                />
+                {errors.description && (
+                  <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.description.message}
+                  </p>
+                )}
+              </div>
             </div>
+
 
             {/* Tags */}
             <Card className="bg-amber-50 dark:bg-amber-950/20">
@@ -526,8 +532,8 @@ export function CreateProblemPage() {
                       onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleTagAdd())}
                     />
                     <Button
-                      type="button"
-                      size="sm"
+                      type="button cursor-pointer"
+                      size={"lg"}
                       onClick={handleTagAdd}
                       className="gap-2"
                     >
@@ -538,27 +544,28 @@ export function CreateProblemPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {tags.map((tag, index) => (
+                  {tagFields.map((field, index) => (
                     <Badge
-                      key={index}
+                      key={field.id}
                       variant="secondary"
-                      className="px-3 py-1.5 bg-blue-100 text-blue-800 hover:bg-blue-200"
+                      className="px-3 py-1.5 bg-blue-100 text-blue-800"
                     >
-                      {tag}
+                      {field.value}
                       <button
                         type="button"
-                        onClick={() => handleTagRemove(index)}
-                        className="ml-2 text-blue-800 hover:text-blue-900"
+                        onClick={() => removeTag(index)}
+                        className="ml-2"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </Badge>
                   ))}
-                  {tags.length === 0 && (
+
+                  {tagFields.length === 0 && (
                     <p className="text-gray-500 text-sm">No tags added yet</p>
                   )}
                 </div>
-                {tags.length === 0 && (
+                {tagFields.length === 0 && (
                   <Alert variant="destructive" className="mt-2">
                     <AlertCircle className="w-4 h-4" />
                     <AlertDescription>
@@ -913,10 +920,10 @@ export function CreateProblemPage() {
                         {errors.difficulty ? '✗ Difficulty' : '✓ Difficulty'}
                       </Badge>
                       <Badge
-                        variant={tags.length === 0 ? "destructive" : "secondary"}
-                        className={tags.length > 0 ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
+                        variant={tagFields.length === 0 ? "destructive" : "secondary"}
+                        className={tagFields.length > 0 ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
                       >
-                        {tags.length === 0 ? '✗ Tags' : `✓ ${tags.length} Tags`}
+                        {tagFields.length === 0 ? '✗ Tags' : `✓ ${tagFields.length} Tags`}
                       </Badge>
                       <Badge
                         variant={errors.examples ? "destructive" : "secondary"}
@@ -942,12 +949,11 @@ export function CreateProblemPage() {
                   <Button
                     type="submit"
                     size="lg"
-                    disabled={createProblemMutation.isPending || !isValid || tags.length === 0}
-                    className={`gap-2 min-w-40 transition-all duration-200 ${
-                      isValid && tags.length > 0 
-                        ? 'bg-green-600 hover:bg-green-700' 
-                        : ''
-                    }`}
+                    disabled={createProblemMutation.isPending || !isValid}
+                    className={`gap-2 min-w-40 transition-all duration-200 ${isValid && tagFields.length > 0
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : ''
+                      }`}
                   >
                     {createProblemMutation.isPending ? (
                       <>
@@ -962,29 +968,6 @@ export function CreateProblemPage() {
                     )}
                   </Button>
                 </div>
-
-                {/* Error Summary */}
-                {(Object.keys(errors).length > 0 || tags.length === 0) && (
-                  <Alert variant="destructive" className="mt-4">
-                    <AlertCircle className="w-4 h-4" />
-                    <AlertDescription>
-                      <div className="flex flex-col gap-1">
-                        <span className="font-semibold">Please fix these errors:</span>
-                        <ul className="list-disc list-inside text-sm space-y-1">
-                          {errors.title && <li>Title: {errors.title.message}</li>}
-                          {errors.description && <li>Description: {errors.description.message}</li>}
-                          {errors.difficulty && <li>Difficulty: {errors.difficulty.message}</li>}
-                          {tags.length === 0 && <li>Tags: At least one tag is required</li>}
-                          {errors.examples && <li>Examples: Please check all example fields</li>}
-                          {errors.constraints && <li>Constraints: {errors.constraints.message}</li>}
-                          {errors.testCases && <li>Test Cases: Please check all test case fields</li>}
-                          {errors.codeSnippets && <li>Starter Code: Required for all languages</li>}
-                          {errors.referenceSolution && <li>Reference Solution: Required for all languages</li>}
-                        </ul>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
               </CardContent>
             </Card>
           </form>
