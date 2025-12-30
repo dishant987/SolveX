@@ -41,3 +41,27 @@ export interface GetAllProblemsParams {
   sortBy: "createdAt" | "title" | "difficulty";
   order: "asc" | "desc";
 }
+
+export interface CreateSubmissionData {
+  userId: string;
+  problemId: string;
+  sourceCode: Record<string, any>;
+  language: string;
+  status?: string;
+  memory?: string;
+  time?: string;
+}
+
+export interface TestCaseResultData {
+  submissionId: string;
+  testCaseId: string;
+  passed: boolean;
+  stdout?: string;
+  stderr?: string;
+  expected: string;
+  compileOutput?: string;
+  status: string;
+  memory?: string;
+  time?: string;
+  
+}

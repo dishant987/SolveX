@@ -90,6 +90,13 @@ export const GetProblemByIdSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const ExecuteCodeSchema = z.object({
+  code: z.string().min(1, "Code is required"),
+  language: z.enum(["javascript", "python", "java"]),
+  stdin: z.array(z.string()).optional(),
+  expected_outputs: z.array(z.string()).optional(),
+});
+
 export type CreateProblemInput = z.infer<typeof CreateProblemSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

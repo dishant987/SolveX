@@ -14,7 +14,9 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
 
   loading: boolean;
-  setAuthStatus: React.Dispatch<React.SetStateAction<"loading" | "authenticated" | "unauthenticated">>;
+  setAuthStatus: React.Dispatch<
+    React.SetStateAction<"loading" | "authenticated" | "unauthenticated">
+  >;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   logout: () => void;
   fetchUser: () => Promise<void>;
@@ -62,3 +64,10 @@ export interface LogoutDialogProps {
   onConfirm: () => void;
   loading?: boolean;
 }
+
+export const Judge0LanguageMap = {
+  javascript: { id: 63, name: "JavaScript (Node.js 12.14.0)" },
+  python: { id: 71, name: "Python (3.8.1)" },
+  java: { id: 62, name: "Java (OpenJDK 13.0.1)" },
+  typescript: { id: 74, name: "TypeScript (3.7.4)" },
+} as const;

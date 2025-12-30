@@ -1,3 +1,4 @@
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,17 +9,25 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTheme } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { useProblemById } from '@/lib/api/problems';
+import { useExecuteCode, useGetProblemsSubmissions, useProblemById, useSubmitExecuteCode } from '@/lib/api/problems';
 import { cn } from '@/lib/utils';
 import { Editor } from '@monaco-editor/react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { AlertCircle, ArrowLeft, Calendar, CheckCircle, Code, FileText, Lightbulb, Loader2, Play, Send, Trophy, User } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Calendar, CheckCircle, Clock, Code, FileText, Lightbulb, Loader2, Play, Send, Trophy, User, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export const Route = createFileRoute('/problems/$id')({
-    component: ProblemIdPage,
+    component: ProtectedProblemPage
+
 })
+
+function ProtectedProblemPage() {
+    return (
+        <ProtectedRoute redirectTo="/">
+            <ProblemIdPage />
+        </ProtectedRoute>
+    );
+}
 
 interface ProblemData {
     id: string;
@@ -54,6 +63,19 @@ interface Submission {
     createdAt: string;
     executionTime?: number;
     memoryUsage?: number;
+    passedTestCases?: number;
+    totalTestCases?: number;
+    testCaseResults?: Array<{
+        passed: boolean;
+        status: string;
+        statusDescription: string;
+        input: string;
+        expectedOutput: string;
+        actualOutput: string;
+        error: string;
+        executionTime: number;
+        memory: number;
+    }>;
 }
 
 // Difficulty Color Helper
@@ -70,11 +92,42 @@ const getDifficultyColor = (difficulty: string) => {
     }
 };
 
+const getStatusIcon = (status: string) => {
+    switch (status) {
+        case 'ACCEPTED':
+            return <CheckCircle className="h-4 w-4" />;
+        case 'WRONG_ANSWER':
+        case 'TIME_LIMIT_EXCEEDED':
+        case 'COMPILATION_ERROR':
+        case 'RUNTIME_ERROR':
+            return <XCircle className="h-4 w-4" />;
+        default:
+            return <AlertCircle className="h-4 w-4" />;
+    }
+};
+
+const getStatusColor = (status: string) => {
+    switch (status) {
+        case 'ACCEPTED':
+            return 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800';
+        case 'WRONG_ANSWER':
+            return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800';
+        case 'TIME_LIMIT_EXCEEDED':
+            return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800';
+        case 'COMPILATION_ERROR':
+            return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800';
+        case 'RUNTIME_ERROR':
+            return 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-200 dark:border-pink-800';
+        default:
+            return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800';
+    }
+};
+
 // Language Options
 const LANGUAGE_OPTIONS = [
-    { value: 'JAVASCRIPT', label: 'JavaScript' },
-    { value: 'PYTHON', label: 'Python' },
-    { value: 'JAVA', label: 'Java' }
+    { value: 'javascript', label: 'JavaScript' },
+    { value: 'python', label: 'Python' },
+    { value: 'java', label: 'Java' }
 ];
 
 // Default Code Templates
@@ -157,18 +210,17 @@ function ProblemIdPage() {
     const navigate = useNavigate();
     const { theme } = useTheme();
     const { toast } = useToast();
-    const { isAuthenticated } = useAuth();
     const { data, isLoading, error, refetch } = useProblemById(id);
-    const [selectedLanguage, setSelectedLanguage] = useState<'JAVASCRIPT' | 'PYTHON' | 'JAVA'>('JAVASCRIPT');
+    const [selectedLanguage, setSelectedLanguage] = useState<'javascript' | 'python' | 'java'>('javascript');
     const [code, setCode] = useState(DEFAULT_CODE_TEMPLATES.JAVASCRIPT);
-    const [isRunning, setIsRunning] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submissionHistory, setSubmissionHistory] = useState<Submission[]>([]);
-    const [executionResponse, setExecutionResponse] = useState<any>(null);
     const [activeTab, setActiveTab] = useState('description');
     const [problemSolved, setProblemSolved] = useState(false);
-
+    const executeCodeMutation = useExecuteCode(id);
     const problem = data?.data as ProblemData | undefined;
+    const { data: submissionsData, isLoading: isLoadingSubmissions, refetch: refetchSubmissions } = useGetProblemsSubmissions(id);
+    const submitExecuteCodeMutation = useSubmitExecuteCode(id);
+    const submissions = submissionsData?.data as any[] | undefined;
+    const [lastSubmissionResult, setLastSubmissionResult] = useState<any>(null);
 
     useEffect(() => {
         if (problem) {
@@ -181,12 +233,6 @@ function ProblemIdPage() {
             setProblemSolved(solved);
         }
     }, [problem, selectedLanguage]);
-
-    useEffect(() => {
-        if (!isAuthenticated) {
-            navigate({ to: '/' });
-        }
-    }, [])
 
     // useEffect(() => {
     //     const fetchSubmissionHistory = async () => {
@@ -208,64 +254,37 @@ function ProblemIdPage() {
         if (!problem) return;
 
         try {
-            setIsRunning(true);
-            const language_id = getJudge0LanguageId(selectedLanguage);
 
-            // Prepare test cases
-            const stdin = problem.testCases.map((tc: any) => tc.input);
-            const expected_outputs = problem.testCases.map((tc: any) => tc.output);
-
-            const res = await executeCode(
+            const res = await executeCodeMutation.mutateAsync({
                 code,
-                language_id,
-                stdin,
-                expected_outputs,
-                problem.id
-            );
-
-            setExecutionResponse(res);
+                language: selectedLanguage,
+            });
 
             if (res.success) {
-                toast({
-                    title: 'Execution successful',
-                    description: 'All test cases passed!',
-                    variant: 'success',
-                    duration: 5000,
-
-                })
-
-                // If all test cases passed, show success message
-                const allPassed = res.submission?.testCases?.every(
-                    (tc: any) => tc.status === 'PASSED'
+                const allPassed = res.submission?.testCases.every(
+                    (tc) => tc.passed
                 );
 
-                if (allPassed) {
-                    toast({
-                        title: 'Execution successful',
-                        description: 'All test cases passed!',
-                        variant: 'success',
-                        duration: 5000,
-
-                    })
-                }
+                toast({
+                    title: allPassed ? "✅ All Test Cases Passed!" : "⚠️ Some Test Cases Failed",
+                    description: allPassed
+                        ? `Great job! ${res.passedTestCases}/${res.totalTestCases} test cases passed.`
+                        : `${res.passedTestCases}/${res.totalTestCases} test cases passed.`,
+                    variant: allPassed ? "success" : "destructive",
+                });
             } else {
                 toast({
-                    title: 'Execution failed',
-                    description: res.error,
-                    variant: 'destructive',
-                    duration: 5000,
-                })
+                    title: "❌ Execution Failed",
+                    description: "Failed to execute code. Please try again.",
+                    variant: "destructive",
+                });
             }
-        } catch (error: any) {
-            console.error('Error executing code:', error);
+        } catch (err: any) {
             toast({
-                title: 'Execution failed',
-                description: error.message,
-                variant: 'destructive',
-                duration: 5000,
-            })
-        } finally {
-            setIsRunning(false);
+                title: "❌ Execution Error",
+                description: err.message || "Failed to execute code",
+                variant: "destructive",
+            });
         }
     };
 
@@ -273,25 +292,46 @@ function ProblemIdPage() {
         if (!problem) return;
 
         try {
-            setIsSubmitting(true);
-            // TODO: Implement submission logic
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Mock API call
-            // toast.success('Submission successful!');
-            // Refresh submission history
-            // const history = await getAllSubmissionByCurrentUserForProblem(params.id);
-            // if (history.success) {
-            //     setSubmissionHistory(history.data);
-            // }
-        } catch (error: any) {
-            console.error('Error submitting code:', error);
-            // toast.error(error.message || 'Submission failed');
-        } finally {
-            setIsSubmitting(false);
+            const res = await submitExecuteCodeMutation.mutateAsync({
+                code,
+                language: selectedLanguage,
+            });
+
+            if (res.success) {
+                setLastSubmissionResult(res.data);
+                toast({
+                    title: res.data.passed ? "🎉 Submission Accepted!" : "❌ Submission Failed",
+                    description: res.message,
+                    variant: res.data.passed ? "success" : "destructive",
+                    duration: res.data.passed ? 5000 : 3000,
+                });
+
+                // Refetch submissions list
+                await refetchSubmissions();
+
+                // If all test cases passed, update solved status
+                if (res.data.passed) {
+                    setProblemSolved(true);
+                    await refetch(); // Refetch problem to get updated solved status
+                }
+            } else {
+                toast({
+                    title: "❌ Submission Error",
+                    description: res.message,
+                    variant: "destructive",
+                });
+            }
+        } catch (err: any) {
+            toast({
+                title: "❌ Submission Error",
+                description: err.response?.data?.message || err.message || "Failed to submit code",
+                variant: "destructive",
+            });
         }
     };
 
     const handleLanguageChange = (value: string) => {
-        setSelectedLanguage(value as 'JAVASCRIPT' | 'PYTHON' | 'JAVA');
+        setSelectedLanguage(value as 'javascript' | 'python' | 'java');
         const newCode = problem?.codeSnippets?.[value] || DEFAULT_CODE_TEMPLATES[value];
         setCode(newCode || '');
     };
@@ -482,16 +522,23 @@ function ProblemIdPage() {
                                     </TabsList>
 
                                     <TabsContent value="submissions" className="p-6">
-                                        {submissionHistory.length > 0 ? (
+                                        {isLoadingSubmissions ? (
                                             <div className="space-y-3">
-                                                {submissionHistory.map((submission) => (
+                                                {[1, 2, 3].map((i) => (
+                                                    <Skeleton key={i} className="h-16 w-full" />
+                                                ))}
+                                            </div>
+                                        ) : submissions && submissions.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {submissions.map((submission: any) => (
                                                     <div
                                                         key={submission.id}
-                                                        className="border rounded-lg p-3 hover:bg-muted/50 transition-colors"
+                                                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
                                                     >
                                                         <div className="flex items-center justify-between">
                                                             <div className="space-y-1">
-                                                                <div className="font-medium">
+                                                                <div className="font-medium flex items-center gap-2">
+                                                                    <Code className="h-4 w-4" />
                                                                     {submission.language}
                                                                 </div>
                                                                 <div className="text-sm text-muted-foreground">
@@ -499,25 +546,36 @@ function ProblemIdPage() {
                                                                 </div>
                                                             </div>
                                                             <Badge
-                                                                variant={
-                                                                    submission.status === 'ACCEPTED' ? 'default' : 'secondary'
-                                                                }
                                                                 className={cn(
-                                                                    submission.status === 'ACCEPTED' &&
-                                                                    'bg-green-500 hover:bg-green-600'
+                                                                    "px-3 py-1",
+                                                                    getStatusColor(submission.status)
                                                                 )}
                                                             >
-                                                                {submission.status}
+                                                                <div className="flex items-center gap-1">
+                                                                    {getStatusIcon(submission.status)}
+                                                                    {submission.status.replace('_', ' ')}
+                                                                </div>
                                                             </Badge>
                                                         </div>
-                                                        {(submission.executionTime || submission.memoryUsage) && (
-                                                            <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                                                                {submission.executionTime && (
-                                                                    <span>{submission.executionTime}ms</span>
-                                                                )}
-                                                                {submission.memoryUsage && (
-                                                                    <span>{submission.memoryUsage}KB</span>
-                                                                )}
+                                                        <div className="flex gap-6 mt-3 text-sm text-muted-foreground">
+                                                            {submission.time && (
+                                                                <div className="flex items-center gap-1">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    <span>{submission.time}ms</span>
+                                                                </div>
+                                                            )}
+                                                            {submission.memory && (
+                                                                <div className="flex items-center gap-1">
+                                                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                                                    </svg>
+                                                                    <span>{submission.memory}KB</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {submission.testCases && submission.testCases.length > 0 && (
+                                                            <div className="mt-2 text-xs text-muted-foreground">
+                                                                {submission.testCases.filter((tc: any) => tc.passed).length}/{submission.testCases.length} test cases passed
                                                             </div>
                                                         )}
                                                     </div>
@@ -626,11 +684,11 @@ function ProblemIdPage() {
                                 <div className="flex gap-3 mt-4">
                                     <Button
                                         onClick={handleRun}
-                                        disabled={isRunning || !code.trim()}
+                                        disabled={executeCodeMutation.isPending || !code.trim()}
                                         variant="outline"
                                         className="flex-1"
                                     >
-                                        {isRunning ? (
+                                        {executeCodeMutation.isPending ? (
                                             <>
                                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                 Running...
@@ -644,10 +702,10 @@ function ProblemIdPage() {
                                     </Button>
                                     <Button
                                         onClick={handleSubmit}
-                                        disabled={isSubmitting || !code.trim()}
+                                        disabled={submitExecuteCodeMutation.isPending || executeCodeMutation.isPending || !code.trim()}
                                         className="flex-1 bg-green-600 hover:bg-green-700"
                                     >
-                                        {isSubmitting ? (
+                                        {submitExecuteCodeMutation.isPending ? (
                                             <>
                                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                 Submitting...
@@ -666,91 +724,180 @@ function ProblemIdPage() {
                         {/* Test Cases */}
                         <Card>
                             <CardHeader className="pb-3">
-                                <CardTitle>Test Cases</CardTitle>
-                                <CardDescription>
-                                    Run your code against these test cases
-                                </CardDescription>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle>Test Cases</CardTitle>
+                                        <CardDescription>
+                                            {lastSubmissionResult ?
+                                                `Latest ${lastSubmissionResult.passed ? 'Submission' : 'Execution'} Results` :
+                                                'Run your code against these test cases'
+                                            }
+                                        </CardDescription>
+                                    </div>
+                                    {lastSubmissionResult && (
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-sm font-medium">
+                                                {lastSubmissionResult.passedTestCases}/{lastSubmissionResult.totalTestCases} Passed
+                                            </div>
+                                            <Badge className={cn(
+                                                "px-3 py-1",
+                                                getStatusColor(lastSubmissionResult.status),
+                                                lastSubmissionResult.passed && "bg-green-500 hover:bg-green-600 text-white"
+                                            )}>
+                                                <div className="flex items-center gap-1">
+                                                    {getStatusIcon(lastSubmissionResult.status)}
+                                                    {lastSubmissionResult.status.replace('_', ' ')}
+                                                </div>
+                                            </Badge>
+                                        </div>
+                                    )}
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <ScrollArea className="h-64">
                                     <div className="space-y-3">
-                                        {problem.testCases.map((testCase: any, index: number) => {
-                                            const executionResult = executionResponse?.submission?.testCases?.[index];
-                                            const isPassed = executionResult?.status === 'PASSED';
-                                            const isFailed = executionResult?.status === 'FAILED';
-
-                                            return (
+                                        {lastSubmissionResult ? (
+                                            lastSubmissionResult.testCaseResults.map((testCaseResult: any, index: number) => (
                                                 <div
                                                     key={index}
                                                     className={cn(
                                                         'border rounded-lg p-3 transition-colors',
-                                                        isPassed && 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20',
-                                                        isFailed && 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20'
+                                                        testCaseResult.passed && 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20',
+                                                        !testCaseResult.passed && 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20'
                                                     )}
                                                 >
                                                     <div className="flex items-center justify-between mb-2">
                                                         <div className="flex items-center gap-2">
+                                                            <div className={cn(
+                                                                "flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium",
+                                                                testCaseResult.passed && "bg-green-500 text-white",
+                                                                !testCaseResult.passed && "bg-red-500 text-white"
+                                                            )}>
+                                                                {index + 1}
+                                                            </div>
                                                             <div className="text-sm font-medium">
                                                                 Test Case {index + 1}
                                                             </div>
-                                                            {executionResult && (
-                                                                <Badge
-                                                                    variant={isPassed ? 'default' : 'destructive'}
-                                                                    className={cn(
-                                                                        'text-xs',
-                                                                        isPassed && 'bg-green-500 hover:bg-green-600'
-                                                                    )}
-                                                                >
-                                                                    {executionResult.status}
-                                                                </Badge>
+                                                            <Badge
+                                                                variant={testCaseResult.passed ? "default" : "destructive"}
+                                                                className={cn(
+                                                                    "text-xs font-medium",
+                                                                    testCaseResult.passed && "bg-green-500 hover:bg-green-600 text-white",
+                                                                    !testCaseResult.passed && "bg-red-500 hover:bg-red-600 text-white"
+                                                                )}
+                                                            >
+                                                                {testCaseResult.status.replace('_', ' ')}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                                            {testCaseResult.time && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    {testCaseResult.time}ms
+                                                                </span>
+                                                            )}
+                                                            {testCaseResult.memory && (
+                                                                <span>{testCaseResult.memory}KB</span>
                                                             )}
                                                         </div>
-                                                        {executionResult && (
-                                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                                                {executionResult.executionTime && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <Clock className="h-3 w-3" />
-                                                                        {executionResult.executionTime}ms
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        )}
                                                     </div>
+
                                                     <div className="space-y-2 text-sm">
                                                         <div>
                                                             <div className="text-muted-foreground mb-1">Input:</div>
-                                                            <pre className="bg-background p-2 rounded text-xs overflow-x-auto">
-                                                                {testCase.input}
+                                                            <pre className="bg-background p-2 rounded text-xs overflow-x-auto font-mono">
+                                                                {testCaseResult.input}
                                                             </pre>
                                                         </div>
+
                                                         <div>
                                                             <div className="text-muted-foreground mb-1">Expected Output:</div>
-                                                            <pre className="bg-background p-2 rounded text-xs overflow-x-auto">
-                                                                {testCase.output}
+                                                            <pre className="bg-background p-2 rounded text-xs overflow-x-auto font-mono">
+                                                                {testCaseResult.expectedOutput}
                                                             </pre>
                                                         </div>
-                                                        {executionResult?.actualOutput && (
+
+                                                        <div>
+                                                            <div className="text-muted-foreground mb-1 flex items-center justify-between">
+                                                                <span>Your Output:</span>
+                                                                {testCaseResult.passed ? (
+                                                                    <span className="text-green-600 dark:text-green-400 text-xs flex items-center">
+                                                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                                                        Correct
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-red-600 dark:text-red-400 text-xs flex items-center">
+                                                                        <AlertCircle className="h-3 w-3 mr-1" />
+                                                                        Incorrect
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <pre className={cn(
+                                                                "bg-background p-2 rounded text-xs overflow-x-auto font-mono border",
+                                                                testCaseResult.passed && "border-green-200 dark:border-green-800 text-green-600 dark:text-green-400",
+                                                                !testCaseResult.passed && "border-red-200 dark:border-red-800 text-red-600 dark:text-red-400"
+                                                            )}>
+                                                                {testCaseResult.actualOutput || "No output"}
+                                                            </pre>
+                                                        </div>
+
+                                                        {testCaseResult.stderr && (
                                                             <div>
-                                                                <div className="text-muted-foreground mb-1">Your Output:</div>
-                                                                <pre className={cn(
-                                                                    "bg-background p-2 rounded text-xs overflow-x-auto",
-                                                                    isPassed && "text-green-600 dark:text-green-400",
-                                                                    isFailed && "text-red-600 dark:text-red-400"
-                                                                )}>
-                                                                    {executionResult.actualOutput}
+                                                                <div className="text-muted-foreground mb-1">Error:</div>
+                                                                <pre className="bg-red-50 dark:bg-red-950/30 p-2 rounded text-xs overflow-x-auto font-mono text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                                                    {testCaseResult.stderr}
+                                                                </pre>
+                                                            </div>
+                                                        )}
+
+                                                        {testCaseResult.compileOutput && (
+                                                            <div>
+                                                                <div className="text-muted-foreground mb-1">Compilation Output:</div>
+                                                                <pre className="bg-yellow-50 dark:bg-yellow-950/30 p-2 rounded text-xs overflow-x-auto font-mono text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
+                                                                    {testCaseResult.compileOutput}
                                                                 </pre>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
+                                            ))
+                                        ) : (
+                                            problem.testCases.map((testCase: any, index: number) => (
+                                                <div
+                                                    key={index}
+                                                    className="border rounded-lg p-3 border-border"
+                                                >
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                                                                {index + 1}
+                                                            </div>
+                                                            <div className="text-sm font-medium">
+                                                                Test Case {index + 1}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2 text-sm">
+                                                        <div>
+                                                            <div className="text-muted-foreground mb-1">Input:</div>
+                                                            <pre className="bg-background p-2 rounded text-xs overflow-x-auto font-mono">
+                                                                {testCase.input}
+                                                            </pre>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-muted-foreground mb-1">Expected Output:</div>
+                                                            <pre className="bg-background p-2 rounded text-xs overflow-x-auto font-mono">
+                                                                {testCase.output}
+                                                            </pre>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                 </ScrollArea>
                             </CardContent>
                         </Card>
-
-
                     </div>
                 </div>
             </div>

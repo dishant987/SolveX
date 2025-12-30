@@ -15,8 +15,35 @@ export interface Problem {
   };
 }
 
-export interface ProblemById{
+export interface ExecuteCodeRequest {
+  code: string;
+  language: "javascript" | "python" | "java";
+}
 
+export interface ExecuteCodeResponse {
+  success: boolean;
+  consoleOutput?: {
+    input: string;
+    output: string | null;
+    error: string | null;
+    status: string;
+    time?: number;
+    memory?: number;
+  };
+  submission?: {
+    testCases: Array<{
+      status: "PASSED" | "FAILED";
+      input: string;
+      expectedOutput: string;
+      actualOutput?: string;
+      error?: string;
+      executionTime?: number;
+      memory?: number;
+      statusDescription?: string;
+    }>;
+  };
+  isCustomInput?: boolean;
+  error?: string;
 }
 
 export interface GetProblemsParams {
@@ -66,7 +93,28 @@ export const problemsApi = {
   },
 
   getProblemById: async (id: string) => {
-    const response = await publicApi.get<ProblemById>(`/problems/${id}`);
+    const response = await publicApi.get(`/problems/${id}`);
+    return response.data;
+  },
+  executeCode: async (problemId: string, payload: ExecuteCodeRequest) => {
+    const response = await api.post<ExecuteCodeResponse>(
+      `/problems/${problemId}/execute`,
+      payload
+    );
+    return response.data;
+  },
+  submitExecuteCode: async (problemId: string, payload: ExecuteCodeRequest) => {
+    const response = await api.post<ExecuteCodeResponse>(
+      `/problems/${problemId}/submit`,
+      payload
+    );
+    return response.data;
+  },
+
+  getAllSubmissions: async (problemId: string) => {
+    const response = await api.get("/problems/submissions", {
+      params: { problemId },
+    });
     return response.data;
   },
 };
@@ -81,9 +129,18 @@ export function useProblems(params: GetProblemsParams = {}) {
 }
 
 export function useProblemById(id: string) {
-  return useApiQuery<ProblemById>({
+  return useApiQuery({
     queryKey: ["problems", id],
     queryFn: () => problemsApi.getProblemById(id),
+    retry: 1,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export function useGetProblemsSubmissions(problemId: string) {
+  return useApiQuery({
+    queryKey: ["problems", problemId, "submissions"],
+    queryFn: () => problemsApi.getAllSubmissions(problemId),
     retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -93,5 +150,21 @@ export function useDeleteProblem() {
   return useApiMutation({
     mutationFn: (id: string) => problemsApi.deleteProblem(id),
     retry: 1,
+  });
+}
+
+export function useExecuteCode(problemId: string) {
+  return useApiMutation({
+    mutationFn: (payload: ExecuteCodeRequest) =>
+      problemsApi.executeCode(problemId, payload),
+    retry: 0,
+  });
+}
+
+export function useSubmitExecuteCode(problemId: string) {
+  return useApiMutation({
+    mutationFn: (payload: ExecuteCodeRequest) =>
+      problemsApi.submitExecuteCode(problemId, payload),
+    retry: 0,
   });
 }

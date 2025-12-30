@@ -1,6 +1,10 @@
 import type { Difficulty } from "../../generated/prisma/enums.js";
 import { prisma } from "../lib/prisma.js";
-import type { GetAllProblemsParams } from "../types/type.js";
+import type {
+  CreateSubmissionData,
+  GetAllProblemsParams,
+  TestCaseResultData,
+} from "../types/type.js";
 
 interface ProblemData {
   title: string;
@@ -131,4 +135,199 @@ export class ProblemService {
     }
     return problem;
   }
+  async getProblemForExecution(problemId: string) {
+    const problem = await prisma.problem.findUnique({
+      where: { id: problemId },
+      select: {
+        id: true,
+        testCases: true,
+      },
+    });
+
+    if (!problem) {
+      throw new Error("PROBLEM_NOT_FOUND");
+    }
+
+    return problem;
+  }
+
+  async createSubmission(data: CreateSubmissionData) {
+    const submission = await prisma.submission.create({
+      data: {
+        userId: data.userId,
+        problemId: data.problemId,
+        sourceCode: data.sourceCode,
+        language: data.language,
+        status: data.status || "PENDING",
+        memory: data.memory || "0",
+        time: data.time || "0",
+      },
+    });
+
+    return submission;
+  }
+
+  async createTestCaseResult(data: TestCaseResultData) {
+    console.log("createTestCaseResult : ",data);
+    const testCaseResult = await prisma.testCaseResult.create({
+      data,
+    });
+
+    return testCaseResult;
+  }
+  async updateSubmissionStatus(
+    submissionId: string,
+    status: string,
+    memory?: string,
+    time?: string
+  ) {
+    const submission = await prisma.submission.update({
+      where: { id: submissionId },
+      data: {
+        status,
+        memory,
+        time,
+      },
+    });
+
+    return submission;
+  }
+
+  async getSubmissionById(id: string, userId?: string) {
+    const submission = await prisma.submission.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        problem: {
+          select: {
+            id: true,
+            title: true,
+            difficulty: true,
+            tags: true,
+          },
+        },
+        testCaseResults: true,
+      },
+    });
+
+    // If userId is provided, ensure the user can only access their own submissions
+    if (userId && submission && submission.userId !== userId) {
+      return null;
+    }
+
+    return submission;
+  }
+
+  async getUserSubmissions(userId: string, problemId?: string) {
+    const where: any = { userId };
+    if (problemId) {
+      where.problemId = problemId;
+    }
+
+    const submissions = await prisma.submission.findMany({
+      where,
+      include: {
+        problem: {
+          select: {
+            id: true,
+            title: true,
+            difficulty: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return submissions;
+  }
+
+  async markProblemAsSolved(userId: string, problemId: string) {
+    // Check if already marked as solved
+    const existing = await prisma.problemSolved.findUnique({
+      where: {
+        userId_problemId: {
+          userId,
+          problemId,
+        },
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // Mark as solved
+    const problemSolved = await prisma.problemSolved.create({
+      data: {
+        userId,
+        problemId,
+      },
+    });
+
+    return problemSolved;
+  }
+
+  async getProblemSubmissions(problemId: string, userId?: string) {
+    const where: any = { problemId };
+    if (userId) {
+      where.userId = userId;
+    }
+
+    const submissions = await prisma.submission.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return submissions;
+  }
+
+  async getProblemSolutionStats(problemId: string) {
+    const [totalSubmissions, acceptedSubmissions, uniqueSolvedUsers] =
+      await Promise.all([
+        prisma.submission.count({
+          where: { problemId },
+        }),
+        prisma.submission.count({
+          where: {
+            problemId,
+            status: "ACCEPTED",
+          },
+        }),
+        prisma.problemSolved.count({
+          where: { problemId },
+        }),
+      ]);
+
+    return {
+      totalSubmissions,
+      acceptedSubmissions,
+      uniqueSolvedUsers,
+      acceptanceRate:
+        totalSubmissions > 0
+          ? Math.round((acceptedSubmissions / totalSubmissions) * 100)
+          : 0,
+    };
+  }
+  
 }
