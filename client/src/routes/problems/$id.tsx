@@ -260,7 +260,7 @@ function ProblemIdPage() {
                 );
 
                 toast({
-                    title: allPassed ? "✅ All Test Cases Passed!" : "⚠️ Some Test Cases Failed",
+                    title: allPassed ? "All Test Cases Passed!" : "Some Test Cases Failed",
                     description: allPassed
                         ? `Great job! ${res.passedTestCases}/${res.totalTestCases} test cases passed.`
                         : `${res.passedTestCases}/${res.totalTestCases} test cases passed.`,
@@ -268,14 +268,14 @@ function ProblemIdPage() {
                 });
             } else {
                 toast({
-                    title: "❌ Execution Failed",
+                    title: "Execution Failed",
                     description: "Failed to execute code. Please try again.",
                     variant: "destructive",
                 });
             }
         } catch (err: any) {
             toast({
-                title: "❌ Execution Error",
+                title: "Execution Error",
                 description: err.message || "Failed to execute code",
                 variant: "destructive",
             });

@@ -145,6 +145,16 @@ export const problemsApi = {
     );
     return response.data;
   },
+
+  forgotPassword: async (data: { email: string }) => {
+    const response = await publicApi.post("/auth/password/reset-request", data);
+    return response.data;
+  },
+
+  resetPassword: async (data: { token: string; newPassword: string }) => {
+    const response = await publicApi.post("/auth/password/reset", data);
+    return response.data;
+  },
 };
 
 export function useProblems(params: GetProblemsParams = {}) {
@@ -250,5 +260,25 @@ export function useRemoveFromPlayList() {
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
     },
     retry: 0,
+  });
+}
+
+export function useForgotPassword() {
+  return useApiMutation({
+    mutationFn: (data: { email: string }) => problemsApi.forgotPassword(data),
+    retry: 0,
+  });
+}
+
+export function useResetPassword(options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: any) => void;
+}) {
+  return useApiMutation({
+    mutationFn: (data: { token: string; newPassword: string }) =>
+      problemsApi.resetPassword(data),
+    retry: 0,
+    onSuccess: options?.onSuccess,
+    onError: options?.onError,
   });
 }

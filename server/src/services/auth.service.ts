@@ -10,6 +10,7 @@ import { AppError } from "../lib/errorhandlers.js";
 import { prisma } from "../lib/prisma.js";
 import { generateTokens, verifyRefreshToken } from "../lib/jwt.js";
 import { uploadToCloudinary } from "../lib/uploadToCloudinary.js";
+import { EmailService } from "./email.service.js";
 
 export class AuthService {
   async register(data: RegisterInput) {
@@ -113,7 +114,6 @@ export class AuthService {
     });
 
     if (!user) {
-      // Don't reveal if user exists
       return { message: "If the email exists, a reset link has been sent" };
     }
 
@@ -124,7 +124,6 @@ export class AuthService {
       );
     }
 
-    // Delete any existing tokens for this user
     await prisma.passwordResetToken.deleteMany({
       where: { userId: user.id },
     });
@@ -140,11 +139,12 @@ export class AuthService {
       },
     });
 
-    // In production, send email with reset link
-    // For now, return token (remove this in production)
+    const resetLink = `${process.env.APP_URL}/reset-password?token=${token}`;
+
+    await EmailService.sendPasswordResetEmail(email, resetLink);
+
     return {
       message: "If the email exists, a reset link has been sent",
-      token: process.env.NODE_ENV === "development" ? token : undefined,
     };
   }
 
@@ -196,8 +196,8 @@ export class AuthService {
             provider: true,
           },
         },
-        playlists:true,
-        problems:true,
+        playlists: true,
+        problems: true,
         submissions: true,
       },
     });
@@ -209,8 +209,15 @@ export class AuthService {
     return user;
   }
 
+  async getUserByEmail(email: string) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    return user;
+  }
+
   async updateProfile(userId: string, data: UpdateProfileInput) {
-    
     const user = await prisma.user.update({
       where: { id: userId },
       data: {

@@ -117,11 +117,11 @@ export class AuthController {
   async requestPasswordReset(req: AuthRequest, res: Response) {
     try {
       const { email } = resetPasswordRequestSchema.parse(req.body);
-      const result = await authService.requestPasswordReset(email);
+      await authService.requestPasswordReset(email);
 
       res.status(200).json({
         success: true,
-        ...result,
+        message: "If the email exists, a reset link has been sent",
       });
     } catch (error) {
       handleError(error, res);

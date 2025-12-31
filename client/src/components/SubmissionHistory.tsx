@@ -32,7 +32,8 @@ export function SubmissionHistory({ submissions, problems }: {
 
     const formatMemory = (memory: string | null) => {
         if (!memory) return "N/A";
-        const mb = parseFloat(memory);
+        const kb = parseFloat(memory);
+        const mb = kb / 1024;
         return `${mb.toFixed(2)} MB`;
     };
 
