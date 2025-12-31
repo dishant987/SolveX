@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import { useApiQuery } from "../typed-query";
 import { useApiMutation } from "../typed-mutation";
 import { publicApi } from "../public-api";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface Problem {
   id: string;
@@ -117,6 +118,33 @@ export const problemsApi = {
     });
     return response.data;
   },
+
+  createPlayList: async (data: { name: string; description?: string }) => {
+    const response = await api.post("/problems/playlists", data);
+    return response.data;
+  },
+
+  getPlayLists: async () => {
+    const response = await api.get("/problems/playlists");
+    return response.data;
+  },
+  addToPlayList: async (playlistId: string, problemId: string) => {
+    const response = await api.post(`/problems/playlists/add-problem`, {
+      playlistId,
+      problemId,
+    });
+    return response.data;
+  },
+  deletePlayList: async (playlistId: string) => {
+    const response = await api.delete(`/problems/playlists/${playlistId}`);
+    return response.data;
+  },
+  removeFromPlayList: async (playlistId: string, problemId: string) => {
+    const response = await api.delete(
+      `/problems/playlists/remove-problem/${playlistId}/${problemId}`
+    );
+    return response.data;
+  },
 };
 
 export function useProblems(params: GetProblemsParams = {}) {
@@ -132,6 +160,15 @@ export function useProblemById(id: string) {
   return useApiQuery({
     queryKey: ["problems", id],
     queryFn: () => problemsApi.getProblemById(id),
+    retry: 1,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export function useGetPlayLists() {
+  return useApiQuery({
+    queryKey: ["playlists"],
+    queryFn: () => problemsApi.getPlayLists(),
     retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -165,6 +202,53 @@ export function useSubmitExecuteCode(problemId: string) {
   return useApiMutation({
     mutationFn: (payload: ExecuteCodeRequest) =>
       problemsApi.submitExecuteCode(problemId, payload),
+    retry: 0,
+  });
+}
+
+export function useCreatePlayList() {
+  const queryClient = useQueryClient();
+  return useApiMutation({
+    mutationFn: (data: { name: string; description?: string }) =>
+      problemsApi.createPlayList(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    },
+    retry: 0,
+  });
+}
+
+export function useAddToPlayList() {
+  const queryClient = useQueryClient();
+  return useApiMutation({
+    mutationFn: (data: { playlistId: string; problemId: string }) =>
+      problemsApi.addToPlayList(data.playlistId, data.problemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    },
+    retry: 0,
+  });
+}
+
+export function useDeletePlayList() {
+  const queryClient = useQueryClient();
+  return useApiMutation({
+    mutationFn: (playlistId: string) => problemsApi.deletePlayList(playlistId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    },
+    retry: 0,
+  });
+}
+
+export function useRemoveFromPlayList() {
+  const queryClient = useQueryClient();
+  return useApiMutation({
+    mutationFn: (data: { playlistId: string; problemId: string }) =>
+      problemsApi.removeFromPlayList(data.playlistId, data.problemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    },
     retry: 0,
   });
 }

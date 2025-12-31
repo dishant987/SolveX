@@ -196,6 +196,9 @@ export class AuthService {
             provider: true,
           },
         },
+        playlists:true,
+        problems:true,
+        submissions: true,
       },
     });
 

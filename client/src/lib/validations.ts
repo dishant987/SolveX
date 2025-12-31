@@ -125,6 +125,11 @@ export const createProblemSchema = z.object({
   ),
 });
 
+export const playlistSchema = z.object({
+  name: z.string().min(1, "Name is required").max(50, "Name is too long"),
+  description: z.string().max(500, "Description is too long").optional(),
+});
+
 export type CreateProblemFormData = z.infer<typeof createProblemSchema>;
 export type ProfileFormData = z.infer<typeof profileSchema>;
 export type LoginFormData = z.infer<typeof loginSchema>;

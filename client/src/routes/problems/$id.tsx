@@ -13,7 +13,7 @@ import { useExecuteCode, useGetProblemsSubmissions, useProblemById, useSubmitExe
 import { cn } from '@/lib/utils';
 import { Editor } from '@monaco-editor/react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { AlertCircle, ArrowLeft, Calendar, CheckCircle, Clock, Code, FileText, Lightbulb, Loader2, Play, Send, Trophy, User, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Calendar, CheckCircle, Clock, Code, FileText, Lightbulb, Loader2, LucideMemoryStick, MemoryStick, Play, Send, Trophy, User, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export const Route = createFileRoute('/problems/$id')({
@@ -150,6 +150,17 @@ public class Solution {
 }`
 };
 
+const formatMemory = (value?: number) => {
+  if (!value && value !== 0) return null;
+
+  // If value looks like bytes
+  const kb = value > 1024 * 1024 ? value / 1024 : value;
+
+  return `${(kb / 1024).toFixed(2)} MB`;
+};
+
+
+
 // Skeleton Loader Component
 const ProblemSkeleton = () => (
     <div className="min-h-screen bg-background">
@@ -233,26 +244,9 @@ function ProblemIdPage() {
             setProblemSolved(solved);
         }
     }, [problem, selectedLanguage]);
-
-    // useEffect(() => {
-    //     const fetchSubmissionHistory = async () => {
-    //         try {
-    //             const history = await getAllSubmissionByCurrentUserForProblem(params.id);
-    //             if (history.success) {
-    //                 setSubmissionHistory(history.data);
-    //             }
-    //         } catch (error) {
-    //             console.error('Error fetching submission history:', error);
-    //             toast.error('Failed to load submission history');
-    //         }
-    //     };
-
-    //     fetchSubmissionHistory();
-    // }, [params.id]);
-
     const handleRun = async () => {
         if (!problem) return;
-
+        setLastSubmissionResult(null);
         try {
 
             const res = await executeCodeMutation.mutateAsync({
@@ -560,16 +554,14 @@ function ProblemIdPage() {
                                                         <div className="flex gap-6 mt-3 text-sm text-muted-foreground">
                                                             {submission.time && (
                                                                 <div className="flex items-center gap-1">
-                                                                    <Clock className="h-3 w-3" />
-                                                                    <span>{submission.time}ms</span>
+                                                                    <Clock className="h-5 w-5" />
+                                                                    <span>Time : {submission.time}ms</span>
                                                                 </div>
                                                             )}
                                                             {submission.memory && (
                                                                 <div className="flex items-center gap-1">
-                                                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                                                    </svg>
-                                                                    <span>{submission.memory}KB</span>
+                                                                    <LucideMemoryStick className="h-5 w-5" />
+                                                                    <span>Memory : {formatMemory(submission.memory)}</span>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -797,7 +789,7 @@ function ProblemIdPage() {
                                                                 </span>
                                                             )}
                                                             {testCaseResult.memory && (
-                                                                <span>{testCaseResult.memory}KB</span>
+                                                                <span>{formatMemory(testCaseResult.memory)}</span>
                                                             )}
                                                         </div>
                                                     </div>

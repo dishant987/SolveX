@@ -24,7 +24,6 @@ export interface GoogleProfile {
   picture?: string;
 }
 
-
 export const Judge0LanguageMap = {
   javascript: { id: 63, name: "JavaScript (Node.js 12.14.0)" },
   python: { id: 71, name: "Python (3.8.1)" },
@@ -63,5 +62,10 @@ export interface TestCaseResultData {
   status: string;
   memory?: string;
   time?: string;
-  
+}
+
+export interface CreatePlayListData {
+  name: string;
+  description?: string;
+  userId: string;
 }

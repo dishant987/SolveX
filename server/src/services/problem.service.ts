@@ -1,6 +1,8 @@
+import type { Prisma } from "../../generated/prisma/client.js";
 import type { Difficulty } from "../../generated/prisma/enums.js";
 import { prisma } from "../lib/prisma.js";
 import type {
+  CreatePlayListData,
   CreateSubmissionData,
   GetAllProblemsParams,
   TestCaseResultData,
@@ -54,7 +56,7 @@ export class ProblemService {
   async getAllProblems(params: GetAllProblemsParams) {
     const { page, limit, search, difficulty, tags, sortBy, order } = params;
 
-    const where: any = {
+    const where: Prisma.ProblemWhereInput = {
       ...(difficulty && { difficulty }),
       ...(tags && {
         tags: {
@@ -87,6 +89,16 @@ export class ProblemService {
             select: {
               id: true,
               email: true,
+            },
+          },
+          problemInPlaylists: {
+            select: {
+              playlist: {
+                select: {
+                  id: true,
+                  userId: true,
+                },
+              },
             },
           },
         },
@@ -168,7 +180,7 @@ export class ProblemService {
   }
 
   async createTestCaseResult(data: TestCaseResultData) {
-    console.log("createTestCaseResult : ",data);
+    console.log("createTestCaseResult : ", data);
     const testCaseResult = await prisma.testCaseResult.create({
       data,
     });
@@ -329,5 +341,79 @@ export class ProblemService {
           : 0,
     };
   }
-  
+
+  async createPlayList(data: CreatePlayListData) {
+    const playList = await prisma.playlist.create({
+      data: {
+        name: data.name,
+        description: data.description || null,
+        userId: data.userId,
+        updatedAt: new Date(),
+      },
+    });
+
+    return playList;
+  }
+
+  async getPlayLists(userId: string) {
+    const playLists = await prisma.playlist.findMany({
+      where: { userId },
+      include: {
+        problems: {
+          include: {
+            problem: {
+              select: {
+                id: true,
+                title: true,
+                difficulty: true,
+                tags: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    return playLists;
+  }
+
+  async getPlayListById(playlistId: string) {
+    const playList = await prisma.playlist.findFirst({
+      where: { id: playlistId },
+    });
+    return playList;
+  }
+
+  async addProblemToPlayList(playlistId: string, problemId: string) {
+    const playListProblem = await prisma.problemInPlaylist.create({
+      data: {
+        playlistId,
+        problemId,
+      },
+    });
+
+    return playListProblem;
+  }
+
+  async deletePlayList(playlistId: string) {
+    const playList = await prisma.playlist.delete({
+      where: { id: playlistId },
+    });
+    return playList;
+  }
+
+  async removeProblemFromPlayList(playlistId: string, problemId: string) {
+    const playListProblem = await prisma.problemInPlaylist.delete({
+      where: {
+        playlistId_problemId: {
+          playlistId,
+          problemId,
+        },
+      },
+    });
+
+    return playListProblem;
+  }
 }

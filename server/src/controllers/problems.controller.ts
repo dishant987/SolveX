@@ -17,7 +17,10 @@ const problemService = new ProblemService();
 export class ProblemsController {
   async createProblem(req: AuthRequest, res: Response) {
     try {
-      const user = req.user!;
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
 
       if (user.role !== "ADMIN") {
         return res.status(403).json({
@@ -108,7 +111,7 @@ export class ProblemsController {
 
   async getProblemById(req: AuthRequest, res: Response) {
     try {
-      const user = req.user!;
+      const user = req.user;
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -136,7 +139,10 @@ export class ProblemsController {
 
   async deleteProblem(req: AuthRequest, res: Response) {
     try {
-      const user = req.user!;
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
       if (!user || user.role !== "ADMIN") {
         return res.status(401).json({
           success: false,
@@ -177,7 +183,10 @@ export class ProblemsController {
   // Update the executeCode function to return proper test case status
   async executeCode(req: AuthRequest, res: Response) {
     try {
-      const user = req.user!;
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -290,7 +299,10 @@ export class ProblemsController {
 
   async submitExecuteCode(req: AuthRequest, res: Response) {
     try {
-      const user = req.user!;
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -462,7 +474,10 @@ export class ProblemsController {
 
   async getSubmissions(req: AuthRequest, res: Response) {
     try {
-      const user = req.user!;
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
       const { problemId } = req.query;
       console.log(problemId);
       const submissions = await problemService.getUserSubmissions(
@@ -481,7 +496,10 @@ export class ProblemsController {
 
   async getSubmissionById(req: AuthRequest, res: Response) {
     try {
-      const user = req.user!;
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
       const { submissionId } = req.params;
 
       const submission = await problemService.getSubmissionById(
@@ -499,6 +517,204 @@ export class ProblemsController {
       return res.status(200).json({
         success: true,
         data: submission,
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+
+  async createPlayList(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
+      const { name, description } = req.body;
+
+      if (!name) {
+        return res.status(400).json({
+          success: false,
+          message: "Name  are required",
+        });
+      }
+
+      const playlist = await problemService.createPlayList({
+        description,
+        name,
+        userId: user.id,
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: playlist,
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+
+  async getPlayLists(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
+
+      const playLists = await problemService.getPlayLists(user.id);
+
+      return res.status(200).json({
+        success: true,
+        data: playLists,
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+
+  async addProblemToPlayList(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
+      const { playlistId, problemId } = req.body;
+
+      if (!playlistId) {
+        return res.status(400).json({
+          success: false,
+          message: "Playlist id is required",
+        });
+      }
+
+      if (!problemId) {
+        return res.status(400).json({
+          success: false,
+          message: "Problem id is required",
+        });
+      }
+
+      const playList = await problemService.getPlayListById(playlistId);
+
+      if (!playList) {
+        return res.status(404).json({
+          success: false,
+          message: "Playlist not found",
+        });
+      }
+
+      const problem = await problemService.getProblemById(problemId);
+
+      if (!problem) {
+        return res.status(404).json({
+          success: false,
+          message: "Problem not found",
+        });
+      }
+
+      const playlist = await problemService.addProblemToPlayList(
+        playlistId,
+        problemId
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: playlist,
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+
+  async deletePlayList(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
+      const { playlistId } = req.params;
+
+      if (!playlistId) {
+        return res.status(400).json({
+          success: false,
+          message: "Playlist id is required",
+        });
+      }
+
+      const playList = await problemService.getPlayListById(playlistId);
+
+      if (!playList) {
+        return res.status(404).json({
+          success: false,
+          message: "Playlist not found",
+        });
+      }
+
+      if (playList.userId !== user.id) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to delete this playlist",
+        });
+      }
+
+      const playlist = await problemService.deletePlayList(playlistId);
+
+      return res.status(200).json({
+        success: true,
+        data: playlist,
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+
+  async removeProblemFromPlayList(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = req.user;
+      const { playlistId, problemId } = req.params;
+
+      if (!playlistId) {
+        return res.status(400).json({
+          success: false,
+          message: "Playlist id is required",
+        });
+      }
+
+      if (!problemId) {
+        return res.status(400).json({
+          success: false,
+          message: "Problem id is required",
+        });
+      }
+
+      const playList = await problemService.getPlayListById(playlistId);
+
+      if (!playList) {
+        return res.status(404).json({
+          success: false,
+          message: "Playlist not found",
+        });
+      }
+
+      const problem = await problemService.getProblemById(problemId);
+
+      if (!problem) {
+        return res.status(404).json({
+          success: false,
+          message: "Problem not found",
+        });
+      }
+
+      const playlist = await problemService.removeProblemFromPlayList(
+        playlistId,
+        problemId
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: playlist,
       });
     } catch (error) {
       handleError(error, res);

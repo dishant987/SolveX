@@ -1,9 +1,9 @@
 import { api } from "@/lib/api";
 import { useApiQuery } from "@/lib/typed-query";
-import { createFileRoute, useNavigate, } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,14 +17,479 @@ import type { ProfileResponse } from "@/types/types";
 import { useAuth } from "@/hooks/useAuth";
 import { profileSchema, type ProfileFormData } from "@/lib/validations";
 import { publicApi } from "@/lib/public-api";
-import { LogOut, Camera, Upload } from "lucide-react";
+import {
+  LogOut,
+  Camera,
+  Upload,
+  Calendar,
+  CheckCircle,
+  Clock,
+  BarChart3,
+  PlayCircle,
+  FileText,
+  Trophy,
+  TrendingUp,
+  CalendarDays
+} from "lucide-react";
 import { LogoutDialog } from "@/components/LogoutDialog";
 import { useApiMutation } from "@/lib/typed-mutation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { formatDistanceToNow } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/profile")({
   component: Profile,
 });
+
+// Helper function to calculate statistics
+function calculateStats(data: ProfileResponse) {
+  const submissions = data.data.user.submissions || [];
+  const problems = data.data.user.problems || [];
+  const playlists = data.data.user.playlists || [];
+
+  const totalSubmissions = submissions.length;
+  const acceptedSubmissions = submissions.filter(s => s.status === "ACCEPTED").length;
+  const successRate = totalSubmissions > 0 ? Math.round((acceptedSubmissions / totalSubmissions) * 100) : 0;
+
+  // Get unique solved problem IDs
+  const solvedProblemIds = new Set(
+    submissions
+      .filter(s => s.status === "ACCEPTED")
+      .map(s => s.problemId)
+  );
+  const totalProblemsSolved = solvedProblemIds.size;
+
+  // Count by difficulty
+  const difficultyCount = problems.reduce((acc, problem) => {
+    if (solvedProblemIds.has(problem.id)) {
+      acc[problem.difficulty] = (acc[problem.difficulty] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Prepare calendar data
+  const submissionCalendar: Record<string, number> = {};
+  submissions.forEach(submission => {
+    const date = new Date(submission.createdAt).toISOString().split('T')[0];
+    submissionCalendar[date] = (submissionCalendar[date] || 0) + 1;
+  });
+
+  // Get recent submissions (last 10)
+  const recentSubmissions = [...submissions]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 10);
+
+  return {
+    totalSubmissions,
+    acceptedSubmissions,
+    successRate,
+    totalProblemsSolved,
+    playlistsCreated: playlists.length,
+    problemsCreated: problems.length,
+    difficultyCount,
+    submissionCalendar,
+    recentSubmissions,
+    allSubmissions: submissions
+  };
+}
+
+// Calendar component
+function SubmissionCalendar({ calendarData }: { calendarData: Record<string, number> }) {
+
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    Object.keys(calendarData).forEach(dateStr => {
+      const year = new Date(dateStr).getFullYear();
+      years.add(year);
+    });
+    // Add current year if not present
+    const currentYear = new Date().getFullYear();
+    years.add(currentYear);
+
+    // Return sorted years in descending order
+    return Array.from(years).sort((a, b) => b - a);
+  }, [calendarData]);
+
+  // Filter calendar data for selected year
+  const filteredCalendarData = useMemo(() => {
+    const result: Record<string, number> = {};
+    Object.entries(calendarData).forEach(([dateStr, count]) => {
+      const year = new Date(dateStr).getFullYear();
+      if (year === selectedYear) {
+        result[dateStr] = count;
+      }
+    });
+    return result;
+  }, [calendarData, selectedYear]);
+
+  // Update months calculation to use filtered data and selected year
+  const months = useMemo(() => {
+    const result: Array<{
+      month: string;
+      year: number;
+      weeks: Array<Array<{ date: Date; count: number } | null>>;
+    }> = [];
+
+    const now = new Date();
+    const currentYear = selectedYear; // Use selected year instead of current year
+    const currentMonth = now.getMonth();
+
+    // Get last 12 months (including current month)
+    for (let i = 0; i < 12; i++) {
+      const monthIndex = (currentMonth - i + 12) % 12;
+      const year = monthIndex > currentMonth ? currentYear - 1 : currentYear;
+
+      // Skip if year doesn't match selected year
+      if (year !== selectedYear) continue;
+
+      const date = new Date(year, monthIndex, 1);
+
+      // Skip future months
+      if (date > now) continue;
+
+      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+      const firstDay = new Date(year, monthIndex, 1);
+      const lastDay = new Date(year, monthIndex + 1, 0);
+
+      const weeks: Array<Array<{ date: Date; count: number } | null>> = [[]];
+      let currentWeek = weeks[0];
+
+      // Calculate the day of week (0 = Sunday, 1 = Monday, etc.)
+      // We want Monday to be the first day of the week
+      let firstDayOfWeek = firstDay.getDay();
+      firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Convert to Monday-based (0 = Monday)
+
+      // Fill empty days for start of month (before the 1st)
+      for (let j = 0; j < firstDayOfWeek; j++) {
+        currentWeek.push(null);
+      }
+
+      // Add days of month
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const currentDate = new Date(year, monthIndex, day);
+        const dateString = currentDate.toISOString().split('T')[0];
+        const count = filteredCalendarData[dateString] || 0; // Use filtered data
+
+        currentWeek.push({ date: currentDate, count });
+
+        // Start new week after Sunday (when we have 7 days in current week)
+        if (currentWeek.length === 7) {
+          weeks.push([]);
+          currentWeek = weeks[weeks.length - 1];
+        }
+      }
+
+      // Fill remaining days with null to complete the last week
+      if (currentWeek.length > 0) {
+        while (currentWeek.length < 7) {
+          currentWeek.push(null);
+        }
+      }
+
+      // Remove empty weeks at the beginning if any
+      const filteredWeeks = weeks.filter(week => week.length > 0);
+
+      result.unshift({
+        month: monthName,
+        year: year,
+        weeks: filteredWeeks
+      });
+    }
+
+    return result;
+  }, [filteredCalendarData, selectedYear]);
+
+
+
+  const getColorForCount = (count: number) => {
+    if (count === 0) return "bg-[#ebedf0] dark:bg-[#2d333b]";
+    if (count === 1) return "bg-[#9be9a8] dark:bg-[#0e4429]";
+    if (count === 2) return "bg-[#40c463] dark:bg-[#006d32]";
+    if (count === 3) return "bg-[#30a14e] dark:bg-[#26a641]";
+    return "bg-[#216e39] dark:bg-[#39d353]";
+  };
+
+  // Calculate total submissions
+  const totalSubmissions = Object.values(filteredCalendarData).reduce((sum, count) => sum + count, 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4" />
+          <h3 className="font-semibold">Submission Calendar</h3>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Add shadcn Year Select Dropdown */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="year-select" className="text-sm text-muted-foreground">
+              Year:
+            </label>
+            <Select
+              value={selectedYear.toString()}
+              onValueChange={(value) => setSelectedYear(Number(value))}
+            >
+              <SelectTrigger className="w-25 h-8">
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            {totalSubmissions} submissions in {selectedYear}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-lg border p-4">
+        <div className="flex flex-col gap-4">
+          {/* Calendar grid - top */}
+          <div className="overflow-x-auto">
+            <div className="flex gap-2">
+              {months.map((monthData, monthIndex) => (
+                <div
+                  key={monthIndex}
+                  className="flex flex-col gap-1"
+                  style={{ minWidth: `${monthData.weeks.length * 10}px` }}
+                >
+                  {monthData.weeks.map((week, weekIndex) => (
+                    <div key={weekIndex} className="flex gap-1">
+                      {week.map((day, dayIndex) => (
+                        <div key={dayIndex} className="w-[9.2px] h-[9px]">
+                          {day ? (
+                            <div
+                              className={`
+                        w-[9.8px] h-[9.6px] rounded-[2px]
+                        ${getColorForCount(day.count)}
+                        ${day.count > 0 ? 'cursor-pointer hover:opacity-80' : ''}
+                      `}
+                              title={`${day.date.toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}: ${day.count} submission${day.count !== 1 ? 's' : ''}`}
+                            />
+                          ) : (
+                            <div className="w-[9px] h-[9px]" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Month labels - bottom */}
+          <div className="flex gap-2 text-xs text-muted-foreground">
+            {months.map((monthData, index) => (
+              <div
+                key={index}
+                className="text-center"
+                style={{ minWidth: `${monthData.weeks.length * 16.8}px` }}
+              >
+                {monthData.month}
+              </div>
+            ))}
+          </div>
+        </div>
+
+
+        {/* Legend */}
+        <div className="mt-6 flex items-center justify-center gap-4 text-xs">
+          <span className="text-muted-foreground">Less</span>
+          <div className="flex items-center gap-[2px]">
+            <div className="w-[15px] h-[15px] rounded-[2px] bg-[#ebedf0] dark:bg-[#2d333b]" />
+            <div className="w-[15px] h-[15px] rounded-[2px] bg-[#9be9a8] dark:bg-[#0e4429]" />
+            <div className="w-[15px] h-[15px] rounded-[2px] bg-[#40c463] dark:bg-[#006d32]" />
+            <div className="w-[15px] h-[15px] rounded-[2px] bg-[#30a14e] dark:bg-[#26a641]" />
+            <div className="w-[15px] h-[15px] rounded-[2px] bg-[#216e39] dark:bg-[#39d353]" />
+          </div>
+          <span className="text-muted-foreground">More</span>
+        </div>
+
+        {/* Weekday labels */}
+        <div className="mt-4 flex justify-center gap-10 text-[10px] text-muted-foreground">
+          <span>Mon</span>
+          <span>Wed</span>
+          <span>Fri</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Stats cards component
+function StatsCards({ stats }: {
+  stats: ReturnType<typeof calculateStats>
+}) {
+  const statItems = [
+    {
+      title: "Problems Solved",
+      value: stats.totalProblemsSolved,
+      icon: <Trophy className="h-5 w-5 text-yellow-500" />,
+      description: "Total unique problems solved"
+    },
+    {
+      title: "Total Submissions",
+      value: stats.totalSubmissions,
+      icon: <FileText className="h-5 w-5 text-blue-500" />,
+      description: "All code submissions"
+    },
+    {
+      title: "Success Rate",
+      value: `${stats.successRate}%`,
+      icon: <TrendingUp className="h-5 w-5 text-green-500" />,
+      description: `${stats.acceptedSubmissions}/${stats.totalSubmissions} accepted`
+    },
+    {
+      title: "Playlists Created",
+      value: stats.playlistsCreated,
+      icon: <PlayCircle className="h-5 w-5 text-purple-500" />,
+      description: "Problem collections created"
+    }
+  ];
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {statItems.map((item, index) => (
+        <Card key={index}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {item.title}
+                </p>
+                <p className="text-2xl font-bold mt-2">
+                  {item.value}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {item.description}
+                </p>
+              </div>
+              <div className="p-2 rounded-full bg-muted">
+                {item.icon}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// Submission history component
+function SubmissionHistory({ submissions, problems }: {
+  submissions: ReturnType<typeof calculateStats>['recentSubmissions'],
+  problems: ProfileResponse['data']['user']['problems']
+}) {
+  const getProblemTitle = (problemId: string) => {
+    const problem = problems.find(p => p.id === problemId);
+    return problem?.title || "Unknown Problem";
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "ACCEPTED": return "text-green-600 dark:text-green-400";
+      case "WRONG_ANSWER": return "text-red-600 dark:text-red-400";
+      case "TIME_LIMIT_EXCEEDED": return "text-orange-600 dark:text-orange-400";
+      case "RUNTIME_ERROR": return "text-red-600 dark:text-red-400";
+      case "COMPILE_ERROR": return "text-yellow-600 dark:text-yellow-400";
+      default: return "text-muted-foreground";
+    }
+  };
+
+  const formatTime = (time: string | null) => {
+    if (!time) return "N/A";
+    return `${parseFloat(time).toFixed(2)}s`;
+  };
+
+  const formatMemory = (memory: string | null) => {
+    if (!memory) return "N/A";
+    const mb = parseFloat(memory);
+    return `${mb.toFixed(2)} MB`;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          Recent Submissions
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {submissions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No submissions yet
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b text-left text-sm text-muted-foreground">
+                    <th className="pb-3">Problem</th>
+                    <th className="pb-3">Status</th>
+                    <th className="pb-3">Language</th>
+                    <th className="pb-3">Time</th>
+                    <th className="pb-3">Memory</th>
+                    <th className="pb-3">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissions.map((submission) => (
+                    <tr key={submission.id} className="border-b last:border-0">
+                      <td className="py-3">
+                        <div className="font-medium">
+                          {getProblemTitle(submission.problemId)}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className={`flex items-center gap-2 font-medium ${getStatusColor(submission.status)}`}>
+                          {submission.status === "ACCEPTED" && (
+                            <CheckCircle className="h-4 w-4" />
+                          )}
+                          {submission.status.replace(/_/g, ' ')}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <Badge variant="outline">
+                          {submission.language.toUpperCase()}
+                        </Badge>
+                      </td>
+                      <td className="py-3 text-sm">
+                        {formatTime(submission.time)}
+                      </td>
+                      <td className="py-3 text-sm">
+                        {formatMemory(submission.memory)}
+                      </td>
+                      <td className="py-3 text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(submission.createdAt), { addSuffix: true })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function Profile() {
   const { toast } = useToast();
@@ -33,7 +498,6 @@ function Profile() {
   const [logoutOpen, setLogoutOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [imageModalOpen, setImageModalOpen] = useState(false)
-
   const [isHovering, setIsHovering] = useState(false)
   const { isAuthenticated, logout, setUser, user } = useAuth();
   const navigate = useNavigate();
@@ -56,7 +520,6 @@ function Profile() {
     return res.data
   }
 
-
   const {
     data: users,
     isLoading,
@@ -69,11 +532,15 @@ function Profile() {
     },
   });
 
+  // Calculate stats
+  const stats = useMemo(() => {
+    if (!users) return null;
+    return calculateStats(users);
+  }, [users]);
+
   const imageMutation = useApiMutation({
     mutationFn: uploadProfileImage,
-
     onSuccess: (data) => {
-      console.log(data);
       toast({
         title: "Profile image updated",
         description: "Your profile photo has been updated successfully.",
@@ -91,9 +558,7 @@ function Profile() {
         }
       })
     },
-
     onError: (error) => {
-      console.log(error);
       const apiError = error.response?.data
       toast({
         variant: "destructive",
@@ -104,13 +569,11 @@ function Profile() {
     },
   })
 
-
   const handleLogout = async () => {
     if (isLoggingOut) return
 
     try {
       setIsLoggingOut(true)
-
       await publicApi.post("/auth/logout")
       logout()
 
@@ -127,7 +590,7 @@ function Profile() {
   }
 
   const handleCameraIconClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the avatar click
+    e.stopPropagation();
     const imageUrl = imagePreview || users?.data.user.imageUrl;
     if (imageUrl) {
       setImageModalOpen(true);
@@ -138,7 +601,6 @@ function Profile() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate client-side
     if (!file.type.startsWith("image/")) {
       toast({
         variant: "destructive",
@@ -157,14 +619,11 @@ function Profile() {
       return
     }
 
-    // Preview instantly
     const previewUrl = URL.createObjectURL(file)
     setImagePreview(previewUrl)
 
-    // Upload
     imageMutation.mutate(file, {
       onSettled: () => {
-        // Clean up the object URL
         URL.revokeObjectURL(previewUrl)
       }
     })
@@ -194,33 +653,98 @@ function Profile() {
 
   const onSubmit = async (data: ProfileFormData) => {
     setSaving(true);
-
     await api.put("/auth/profile", data);
-
     toast({
       title: "Profile updated",
       description: "Your profile information has been saved.",
     });
-
     setSaving(false);
     reset(data);
   };
 
-  /* ---------------- LOADING ---------------- */
-
-  if (isLoading) {
+  if (isLoading || !users || !stats) {
     return <ProfileSkeleton />;
   }
 
-  /* ---------------- UI ---------------- */
-
   return (
-    <div className="mx-auto max-w-5xl py-10">
+    <div className="mx-auto max-w-7xl py-6 px-4 sm:px-6 lg:px-8">
+      {/* DASHBOARD SECTION */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-6">
+          <BarChart3 className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+        </div>
+
+        {/* STATS CARDS */}
+        <StatsCards stats={stats} />
+
+        {/* CALENDAR AND INFO GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          {/* CALENDAR */}
+          <div className="lg:col-span-3">
+            <SubmissionCalendar calendarData={stats.submissionCalendar} />
+          </div>
+
+          {/* QUICK INFO */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Quick Info</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Member Since</p>
+                <p className="font-medium">
+                  {new Date(users.data.user.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Role</p>
+                <Badge variant={users.data.user.role === "ADMIN" ? "default" : "secondary"}>
+                  {users.data.user.role}
+                </Badge>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Problems Created</p>
+                <p className="font-medium">{stats.problemsCreated}</p>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Difficulty Breakdown</p>
+                <div className="space-y-2 mt-2">
+                  {Object.entries(stats.difficultyCount).map(([difficulty, count]) => (
+                    <div key={difficulty} className="flex items-center justify-between">
+                      <span className="text-sm">{difficulty}</span>
+                      <Badge variant="outline">{count}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* SUBMISSION HISTORY */}
+        <div className="mt-8">
+          <SubmissionHistory
+            submissions={stats.recentSubmissions}
+            problems={users.data.user.problems}
+          />
+        </div>
+      </div>
+
+      {/* PROFILE EDITING SECTION */}
+      <Separator className="my-8" />
+
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
         {/* LEFT – PROFILE CARD */}
         <Card className="md:col-span-1">
           <CardContent className="flex flex-col items-center gap-4 pt-6">
-            {/* AVATAR WITH HOVER EFFECT */}
             <div
               className="relative group"
               onMouseEnter={() => setIsHovering(true)}
@@ -252,7 +776,6 @@ function Profile() {
                   )}
                 </Avatar>
 
-                {/* CAMERA OVERLAY EFFECT */}
                 <div className={`
                   absolute inset-0 flex flex-col items-center justify-center 
                   rounded-full bg-black/60 text-white opacity-0 
@@ -275,16 +798,15 @@ function Profile() {
                 </div>
               </div>
 
-              {/* CAMERA ICON BADGE */}
               <div
                 className={`
-      absolute -bottom-2 -right-2 h-10 w-10 rounded-full 
-      bg-primary text-primary-foreground flex items-center justify-center 
-      shadow-lg border-4 border-background
-      transition-all duration-300
-      ${isHovering ? 'scale-110 rotate-12' : 'scale-100'}
-      ${(users?.data.user.imageUrl || imagePreview) ? 'cursor-pointer hover:bg-primary/90' : 'cursor-default'}
-    `}
+                  absolute -bottom-2 -right-2 h-10 w-10 rounded-full 
+                  bg-primary text-primary-foreground flex items-center justify-center 
+                  shadow-lg border-4 border-background
+                  transition-all duration-300
+                  ${isHovering ? 'scale-110 rotate-12' : 'scale-100'}
+                  ${(users?.data.user.imageUrl || imagePreview) ? 'cursor-pointer hover:bg-primary/90' : 'cursor-default'}
+                `}
                 onClick={handleCameraIconClick}
                 title="View profile photo"
               >
@@ -295,7 +817,6 @@ function Profile() {
                 )}
               </div>
 
-              {/* HIDDEN FILE INPUT */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -306,7 +827,6 @@ function Profile() {
               />
             </div>
 
-            {/* USER INFO */}
             <div className="text-center mt-4">
               <p className="font-semibold text-lg">
                 {users?.data.user.firstName} {users?.data.user.lastName}
@@ -314,7 +834,6 @@ function Profile() {
               <p className="text-sm text-muted-foreground mt-1">{users?.data.user.email}</p>
             </div>
 
-            {/* PROVIDER BADGES */}
             <div className="flex flex-wrap gap-2 justify-center">
               {users?.data.user.accounts.map((acc) => (
                 <Badge key={acc.provider} variant="secondary">
@@ -323,7 +842,6 @@ function Profile() {
               ))}
             </div>
 
-            {/* UPLOAD BUTTON FOR MOBILE */}
             <Button
               variant="outline"
               size="sm"
@@ -344,7 +862,6 @@ function Profile() {
               )}
             </Button>
 
-            {/* LOGOUT BUTTON */}
             <Button
               variant="destructive"
               className="w-full mt-6 cursor-pointer"
@@ -354,7 +871,6 @@ function Profile() {
               <LogOut className="mr-2 h-4 w-4" />
               {isLoggingOut ? "Logging out..." : "Logout"}
             </Button>
-
           </CardContent>
         </Card>
 
@@ -411,7 +927,6 @@ function Profile() {
                 />
               </FormField>
 
-              {/* PROVIDER INFO */}
               <div className="rounded-lg border p-4">
                 <p className="text-sm font-medium mb-2">
                   Authentication Providers
@@ -439,6 +954,7 @@ function Profile() {
           </CardContent>
         </Card>
       </div>
+
       <LogoutDialog
         open={logoutOpen}
         onOpenChange={!isLoggingOut ? setLogoutOpen : () => { }}
@@ -490,11 +1006,22 @@ function Profile() {
   );
 }
 
-/* ---------------- SKELETON ---------------- */
-
 function ProfileSkeleton() {
   return (
-    <div className="mx-auto max-w-5xl py-10">
+    <div className="mx-auto max-w-7xl py-6 px-4 sm:px-6 lg:px-8">
+      <div className="mb-8">
+        <Skeleton className="h-8 w-48 mb-6" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          <Skeleton className="h-64 w-full rounded-xl lg:col-span-2" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+        <Skeleton className="h-64 w-full rounded-xl mt-8" />
+      </div>
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
         <Skeleton className="h-[320px] w-full rounded-xl" />
         <Skeleton className="h-[420px] w-full rounded-xl md:col-span-2" />

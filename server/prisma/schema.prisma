@@ -31,6 +31,7 @@ model User {
 
   problemSolveds ProblemSolved[]
   submissions    Submission[]
+  playlists      Playlist[]
 }
 
 model AuthAccount {
@@ -83,8 +84,9 @@ model Problem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  problemSolveds ProblemSolved[]
-  submissions    Submission[]
+  problemSolveds     ProblemSolved[]
+  submissions        Submission[]
+  problemInPlaylists ProblemInPlaylist[]
 }
 
 model Submission {
@@ -103,8 +105,8 @@ model Submission {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem   Problem          @relation(fields: [problemId], references: [id], onDelete: Cascade)
   testCases TestCaseResult[]
 
   @@index([status])
@@ -126,7 +128,6 @@ model TestCaseResult {
   updatedAt     DateTime @updatedAt
 
   submissions Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-
 }
 
 model ProblemSolved {
@@ -139,6 +140,32 @@ model ProblemSolved {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, problemId])
+}
+
+model Playlist {
+  id          String              @id @default(uuid())
+  name        String
+  description String?
+  userId      String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  problems    ProblemInPlaylist[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([name, userId])
+}
+
+model ProblemInPlaylist {
+  id         String   @id @default(uuid())
+  playlistId String
+  problemId  String
+  createdAt  DateTime @default(now())
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  problem  Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, problemId])
 }
 
 enum Difficulty {

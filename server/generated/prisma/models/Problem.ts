@@ -245,6 +245,7 @@ export type ProblemWhereInput = {
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   problemSolveds?: Prisma.ProblemSolvedListRelationFilter
   submissions?: Prisma.SubmissionListRelationFilter
+  problemInPlaylists?: Prisma.ProblemInPlaylistListRelationFilter
 }
 
 export type ProblemOrderByWithRelationInput = {
@@ -266,6 +267,7 @@ export type ProblemOrderByWithRelationInput = {
   user?: Prisma.UserOrderByWithRelationInput
   problemSolveds?: Prisma.ProblemSolvedOrderByRelationAggregateInput
   submissions?: Prisma.SubmissionOrderByRelationAggregateInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistOrderByRelationAggregateInput
 }
 
 export type ProblemWhereUniqueInput = Prisma.AtLeast<{
@@ -290,6 +292,7 @@ export type ProblemWhereUniqueInput = Prisma.AtLeast<{
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   problemSolveds?: Prisma.ProblemSolvedListRelationFilter
   submissions?: Prisma.SubmissionListRelationFilter
+  problemInPlaylists?: Prisma.ProblemInPlaylistListRelationFilter
 }, "id">
 
 export type ProblemOrderByWithAggregationInput = {
@@ -352,6 +355,7 @@ export type ProblemCreateInput = {
   user: Prisma.UserCreateNestedOneWithoutProblemsInput
   problemSolveds?: Prisma.ProblemSolvedCreateNestedManyWithoutProblemInput
   submissions?: Prisma.SubmissionCreateNestedManyWithoutProblemInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistCreateNestedManyWithoutProblemInput
 }
 
 export type ProblemUncheckedCreateInput = {
@@ -372,6 +376,7 @@ export type ProblemUncheckedCreateInput = {
   updatedAt?: Date | string
   problemSolveds?: Prisma.ProblemSolvedUncheckedCreateNestedManyWithoutProblemInput
   submissions?: Prisma.SubmissionUncheckedCreateNestedManyWithoutProblemInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUncheckedCreateNestedManyWithoutProblemInput
 }
 
 export type ProblemUpdateInput = {
@@ -392,6 +397,7 @@ export type ProblemUpdateInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutProblemsNestedInput
   problemSolveds?: Prisma.ProblemSolvedUpdateManyWithoutProblemNestedInput
   submissions?: Prisma.SubmissionUpdateManyWithoutProblemNestedInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUpdateManyWithoutProblemNestedInput
 }
 
 export type ProblemUncheckedUpdateInput = {
@@ -412,6 +418,7 @@ export type ProblemUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   problemSolveds?: Prisma.ProblemSolvedUncheckedUpdateManyWithoutProblemNestedInput
   submissions?: Prisma.SubmissionUncheckedUpdateManyWithoutProblemNestedInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUncheckedUpdateManyWithoutProblemNestedInput
 }
 
 export type ProblemCreateManyInput = {
@@ -617,6 +624,20 @@ export type ProblemUpdateOneRequiredWithoutProblemSolvedsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ProblemUpdateToOneWithWhereWithoutProblemSolvedsInput, Prisma.ProblemUpdateWithoutProblemSolvedsInput>, Prisma.ProblemUncheckedUpdateWithoutProblemSolvedsInput>
 }
 
+export type ProblemCreateNestedOneWithoutProblemInPlaylistsInput = {
+  create?: Prisma.XOR<Prisma.ProblemCreateWithoutProblemInPlaylistsInput, Prisma.ProblemUncheckedCreateWithoutProblemInPlaylistsInput>
+  connectOrCreate?: Prisma.ProblemCreateOrConnectWithoutProblemInPlaylistsInput
+  connect?: Prisma.ProblemWhereUniqueInput
+}
+
+export type ProblemUpdateOneRequiredWithoutProblemInPlaylistsNestedInput = {
+  create?: Prisma.XOR<Prisma.ProblemCreateWithoutProblemInPlaylistsInput, Prisma.ProblemUncheckedCreateWithoutProblemInPlaylistsInput>
+  connectOrCreate?: Prisma.ProblemCreateOrConnectWithoutProblemInPlaylistsInput
+  upsert?: Prisma.ProblemUpsertWithoutProblemInPlaylistsInput
+  connect?: Prisma.ProblemWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ProblemUpdateToOneWithWhereWithoutProblemInPlaylistsInput, Prisma.ProblemUpdateWithoutProblemInPlaylistsInput>, Prisma.ProblemUncheckedUpdateWithoutProblemInPlaylistsInput>
+}
+
 export type ProblemCreateWithoutUserInput = {
   id?: string
   title: string
@@ -634,6 +655,7 @@ export type ProblemCreateWithoutUserInput = {
   updatedAt?: Date | string
   problemSolveds?: Prisma.ProblemSolvedCreateNestedManyWithoutProblemInput
   submissions?: Prisma.SubmissionCreateNestedManyWithoutProblemInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistCreateNestedManyWithoutProblemInput
 }
 
 export type ProblemUncheckedCreateWithoutUserInput = {
@@ -653,6 +675,7 @@ export type ProblemUncheckedCreateWithoutUserInput = {
   updatedAt?: Date | string
   problemSolveds?: Prisma.ProblemSolvedUncheckedCreateNestedManyWithoutProblemInput
   submissions?: Prisma.SubmissionUncheckedCreateNestedManyWithoutProblemInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUncheckedCreateNestedManyWithoutProblemInput
 }
 
 export type ProblemCreateOrConnectWithoutUserInput = {
@@ -719,6 +742,7 @@ export type ProblemCreateWithoutSubmissionsInput = {
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutProblemsInput
   problemSolveds?: Prisma.ProblemSolvedCreateNestedManyWithoutProblemInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistCreateNestedManyWithoutProblemInput
 }
 
 export type ProblemUncheckedCreateWithoutSubmissionsInput = {
@@ -738,6 +762,7 @@ export type ProblemUncheckedCreateWithoutSubmissionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   problemSolveds?: Prisma.ProblemSolvedUncheckedCreateNestedManyWithoutProblemInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUncheckedCreateNestedManyWithoutProblemInput
 }
 
 export type ProblemCreateOrConnectWithoutSubmissionsInput = {
@@ -773,6 +798,7 @@ export type ProblemUpdateWithoutSubmissionsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutProblemsNestedInput
   problemSolveds?: Prisma.ProblemSolvedUpdateManyWithoutProblemNestedInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUpdateManyWithoutProblemNestedInput
 }
 
 export type ProblemUncheckedUpdateWithoutSubmissionsInput = {
@@ -792,6 +818,7 @@ export type ProblemUncheckedUpdateWithoutSubmissionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   problemSolveds?: Prisma.ProblemSolvedUncheckedUpdateManyWithoutProblemNestedInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUncheckedUpdateManyWithoutProblemNestedInput
 }
 
 export type ProblemCreateWithoutProblemSolvedsInput = {
@@ -811,6 +838,7 @@ export type ProblemCreateWithoutProblemSolvedsInput = {
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutProblemsInput
   submissions?: Prisma.SubmissionCreateNestedManyWithoutProblemInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistCreateNestedManyWithoutProblemInput
 }
 
 export type ProblemUncheckedCreateWithoutProblemSolvedsInput = {
@@ -830,6 +858,7 @@ export type ProblemUncheckedCreateWithoutProblemSolvedsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   submissions?: Prisma.SubmissionUncheckedCreateNestedManyWithoutProblemInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUncheckedCreateNestedManyWithoutProblemInput
 }
 
 export type ProblemCreateOrConnectWithoutProblemSolvedsInput = {
@@ -865,6 +894,7 @@ export type ProblemUpdateWithoutProblemSolvedsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutProblemsNestedInput
   submissions?: Prisma.SubmissionUpdateManyWithoutProblemNestedInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUpdateManyWithoutProblemNestedInput
 }
 
 export type ProblemUncheckedUpdateWithoutProblemSolvedsInput = {
@@ -883,6 +913,103 @@ export type ProblemUncheckedUpdateWithoutProblemSolvedsInput = {
   referenceSolution?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  submissions?: Prisma.SubmissionUncheckedUpdateManyWithoutProblemNestedInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUncheckedUpdateManyWithoutProblemNestedInput
+}
+
+export type ProblemCreateWithoutProblemInPlaylistsInput = {
+  id?: string
+  title: string
+  description: string
+  difficulty: $Enums.Difficulty
+  tags?: Prisma.ProblemCreatetagsInput | string[]
+  examples: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  constraints: string
+  hints?: string | null
+  editorial?: string | null
+  testCases: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  codeSnippets: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  referenceSolution: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutProblemsInput
+  problemSolveds?: Prisma.ProblemSolvedCreateNestedManyWithoutProblemInput
+  submissions?: Prisma.SubmissionCreateNestedManyWithoutProblemInput
+}
+
+export type ProblemUncheckedCreateWithoutProblemInPlaylistsInput = {
+  id?: string
+  title: string
+  description: string
+  difficulty: $Enums.Difficulty
+  tags?: Prisma.ProblemCreatetagsInput | string[]
+  userId: string
+  examples: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  constraints: string
+  hints?: string | null
+  editorial?: string | null
+  testCases: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  codeSnippets: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  referenceSolution: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  problemSolveds?: Prisma.ProblemSolvedUncheckedCreateNestedManyWithoutProblemInput
+  submissions?: Prisma.SubmissionUncheckedCreateNestedManyWithoutProblemInput
+}
+
+export type ProblemCreateOrConnectWithoutProblemInPlaylistsInput = {
+  where: Prisma.ProblemWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProblemCreateWithoutProblemInPlaylistsInput, Prisma.ProblemUncheckedCreateWithoutProblemInPlaylistsInput>
+}
+
+export type ProblemUpsertWithoutProblemInPlaylistsInput = {
+  update: Prisma.XOR<Prisma.ProblemUpdateWithoutProblemInPlaylistsInput, Prisma.ProblemUncheckedUpdateWithoutProblemInPlaylistsInput>
+  create: Prisma.XOR<Prisma.ProblemCreateWithoutProblemInPlaylistsInput, Prisma.ProblemUncheckedCreateWithoutProblemInPlaylistsInput>
+  where?: Prisma.ProblemWhereInput
+}
+
+export type ProblemUpdateToOneWithWhereWithoutProblemInPlaylistsInput = {
+  where?: Prisma.ProblemWhereInput
+  data: Prisma.XOR<Prisma.ProblemUpdateWithoutProblemInPlaylistsInput, Prisma.ProblemUncheckedUpdateWithoutProblemInPlaylistsInput>
+}
+
+export type ProblemUpdateWithoutProblemInPlaylistsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.EnumDifficultyFieldUpdateOperationsInput | $Enums.Difficulty
+  tags?: Prisma.ProblemUpdatetagsInput | string[]
+  examples?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  constraints?: Prisma.StringFieldUpdateOperationsInput | string
+  hints?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  editorial?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  testCases?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  codeSnippets?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  referenceSolution?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutProblemsNestedInput
+  problemSolveds?: Prisma.ProblemSolvedUpdateManyWithoutProblemNestedInput
+  submissions?: Prisma.SubmissionUpdateManyWithoutProblemNestedInput
+}
+
+export type ProblemUncheckedUpdateWithoutProblemInPlaylistsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.EnumDifficultyFieldUpdateOperationsInput | $Enums.Difficulty
+  tags?: Prisma.ProblemUpdatetagsInput | string[]
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  examples?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  constraints?: Prisma.StringFieldUpdateOperationsInput | string
+  hints?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  editorial?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  testCases?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  codeSnippets?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  referenceSolution?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  problemSolveds?: Prisma.ProblemSolvedUncheckedUpdateManyWithoutProblemNestedInput
   submissions?: Prisma.SubmissionUncheckedUpdateManyWithoutProblemNestedInput
 }
 
@@ -920,6 +1047,7 @@ export type ProblemUpdateWithoutUserInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   problemSolveds?: Prisma.ProblemSolvedUpdateManyWithoutProblemNestedInput
   submissions?: Prisma.SubmissionUpdateManyWithoutProblemNestedInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUpdateManyWithoutProblemNestedInput
 }
 
 export type ProblemUncheckedUpdateWithoutUserInput = {
@@ -939,6 +1067,7 @@ export type ProblemUncheckedUpdateWithoutUserInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   problemSolveds?: Prisma.ProblemSolvedUncheckedUpdateManyWithoutProblemNestedInput
   submissions?: Prisma.SubmissionUncheckedUpdateManyWithoutProblemNestedInput
+  problemInPlaylists?: Prisma.ProblemInPlaylistUncheckedUpdateManyWithoutProblemNestedInput
 }
 
 export type ProblemUncheckedUpdateManyWithoutUserInput = {
@@ -966,11 +1095,13 @@ export type ProblemUncheckedUpdateManyWithoutUserInput = {
 export type ProblemCountOutputType = {
   problemSolveds: number
   submissions: number
+  problemInPlaylists: number
 }
 
 export type ProblemCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   problemSolveds?: boolean | ProblemCountOutputTypeCountProblemSolvedsArgs
   submissions?: boolean | ProblemCountOutputTypeCountSubmissionsArgs
+  problemInPlaylists?: boolean | ProblemCountOutputTypeCountProblemInPlaylistsArgs
 }
 
 /**
@@ -997,6 +1128,13 @@ export type ProblemCountOutputTypeCountSubmissionsArgs<ExtArgs extends runtime.T
   where?: Prisma.SubmissionWhereInput
 }
 
+/**
+ * ProblemCountOutputType without action
+ */
+export type ProblemCountOutputTypeCountProblemInPlaylistsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ProblemInPlaylistWhereInput
+}
+
 
 export type ProblemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1017,6 +1155,7 @@ export type ProblemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   problemSolveds?: boolean | Prisma.Problem$problemSolvedsArgs<ExtArgs>
   submissions?: boolean | Prisma.Problem$submissionsArgs<ExtArgs>
+  problemInPlaylists?: boolean | Prisma.Problem$problemInPlaylistsArgs<ExtArgs>
   _count?: boolean | Prisma.ProblemCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["problem"]>
 
@@ -1081,6 +1220,7 @@ export type ProblemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   problemSolveds?: boolean | Prisma.Problem$problemSolvedsArgs<ExtArgs>
   submissions?: boolean | Prisma.Problem$submissionsArgs<ExtArgs>
+  problemInPlaylists?: boolean | Prisma.Problem$problemInPlaylistsArgs<ExtArgs>
   _count?: boolean | Prisma.ProblemCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ProblemIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1096,6 +1236,7 @@ export type $ProblemPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     user: Prisma.$UserPayload<ExtArgs>
     problemSolveds: Prisma.$ProblemSolvedPayload<ExtArgs>[]
     submissions: Prisma.$SubmissionPayload<ExtArgs>[]
+    problemInPlaylists: Prisma.$ProblemInPlaylistPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1510,6 +1651,7 @@ export interface Prisma__ProblemClient<T, Null = never, ExtArgs extends runtime.
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   problemSolveds<T extends Prisma.Problem$problemSolvedsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Problem$problemSolvedsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProblemSolvedPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   submissions<T extends Prisma.Problem$submissionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Problem$submissionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubmissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  problemInPlaylists<T extends Prisma.Problem$problemInPlaylistsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Problem$problemInPlaylistsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProblemInPlaylistPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1995,6 +2137,30 @@ export type Problem$submissionsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.SubmissionScalarFieldEnum | Prisma.SubmissionScalarFieldEnum[]
+}
+
+/**
+ * Problem.problemInPlaylists
+ */
+export type Problem$problemInPlaylistsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ProblemInPlaylist
+   */
+  select?: Prisma.ProblemInPlaylistSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ProblemInPlaylist
+   */
+  omit?: Prisma.ProblemInPlaylistOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ProblemInPlaylistInclude<ExtArgs> | null
+  where?: Prisma.ProblemInPlaylistWhereInput
+  orderBy?: Prisma.ProblemInPlaylistOrderByWithRelationInput | Prisma.ProblemInPlaylistOrderByWithRelationInput[]
+  cursor?: Prisma.ProblemInPlaylistWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ProblemInPlaylistScalarFieldEnum | Prisma.ProblemInPlaylistScalarFieldEnum[]
 }
 
 /**

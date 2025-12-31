@@ -29,6 +29,8 @@ import type { GetProblemsParams, Problem } from "@/lib/api/problems";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useDeleteProblem } from "@/lib/api/problems";
+import CreatePlaylistModal from "./CreatePlaylistModal";
+import AddToPlaylistModal from "./AddToPlaylistModal";
 
 interface ProblemsTableProps {
     data: Problem[];
@@ -61,8 +63,10 @@ export function ProblemsTable({
     const { toast } = useToast();
     const { user, isAuthenticated } = useAuth();
     const isAdmin = user?.role === "ADMIN";
-    const navigate = useNavigate();
-
+    const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false);
+    const [isAddToPlaylistModalOpen, setIsAddToPlaylistModalOpen] =
+        useState(false);
+    const [selectedProblemId, setSelectedProblemId] = useState<string | null>(null);
     // Extract unique tags for filter
     const allTags = Array.from(
         new Set(data?.flatMap((problem) => problem.tags) || [])
@@ -214,7 +218,10 @@ export function ProblemsTable({
 
                 {
                     isAuthenticated && (
-                        <Button className="gap-2 cursor-pointer">
+                        <Button
+                            className="gap-2 cursor-pointer"
+                            onClick={() => setCreatePlaylistOpen(true)}
+                        >
                             <Plus className="h-4 w-4" />
                             Create Playlist
                         </Button>
@@ -443,14 +450,24 @@ export function ProblemsTable({
                                                         </>
                                                     )
                                                 }
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-2 ml-2"
-                                                >
-                                                    <Bookmark className="h-4 w-4" />
-                                                    Save
-                                                </Button>
+                                                {
+                                                    isAuthenticated && (
+
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setSelectedProblemId(problem.id);
+                                                                setIsAddToPlaylistModalOpen(true);
+                                                            }}
+                                                            className="gap-2"
+                                                        >
+                                                            <Bookmark className="h-4 w-4" />
+                                                            <span className="hidden sm:inline">Save</span>
+                                                        </Button>
+
+                                                    )
+                                                }
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -541,6 +558,19 @@ export function ProblemsTable({
                         </Button>
                     </div>
                 </div>
+            )}
+
+            <CreatePlaylistModal
+                isOpen={createPlaylistOpen}
+                onClose={() => setCreatePlaylistOpen(false)}
+            />
+
+            {selectedProblemId && (
+                <AddToPlaylistModal
+                    isOpen={isAddToPlaylistModalOpen}
+                    onClose={() => setIsAddToPlaylistModalOpen(false)}
+                    problemId={selectedProblemId}
+                />
             )}
 
             {/* Delete Confirmation Dialog */}

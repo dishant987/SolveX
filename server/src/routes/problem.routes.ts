@@ -5,12 +5,54 @@ import { authenticate } from "../middlewares/auth.middleware.js";
 const router = Router();
 const problemController = new ProblemsController();
 
-// static routes
+/* ======================
+   STATIC & NESTED ROUTES
+   ====================== */
+
 router.get(
   "/problems/submissions",
   authenticate,
   problemController.getSubmissions.bind(problemController)
 );
+
+router.get(
+  "/problems/submissions/:submissionId",
+  authenticate,
+  problemController.getSubmissionById.bind(problemController)
+);
+
+router.post(
+  "/problems/playlists",
+  authenticate,
+  problemController.createPlayList.bind(problemController)
+);
+
+router.get(
+  "/problems/playlists",
+  authenticate,
+  problemController.getPlayLists.bind(problemController)
+);
+
+router.post(
+  "/problems/playlists/add-problem",
+  authenticate,
+  problemController.addProblemToPlayList.bind(problemController)
+);
+
+router.delete(
+  "/problems/playlists/:playlistId",
+  authenticate,
+  problemController.deletePlayList.bind(problemController)
+);
+router.delete(
+  "/problems/playlists/remove-problem/:playlistId/:problemId",
+  authenticate,
+  problemController.removeProblemFromPlayList.bind(problemController)
+);
+
+/* ======================
+   PROBLEM CRUD & ACTIONS
+   ====================== */
 
 router.post(
   "/problems",
@@ -24,17 +66,6 @@ router.post(
   problemController.executeCode.bind(problemController)
 );
 
-router.get(
-  "/problems/:id",
-  authenticate,
-  problemController.getProblemById.bind(problemController)
-);
-router.delete(
-  "/problems/:id",
-  authenticate,
-  problemController.deleteProblem.bind(problemController)
-);
-
 router.post(
   "/problems/:id/submit",
   authenticate,
@@ -42,12 +73,21 @@ router.post(
 );
 
 router.get(
-  "/problems/submissions/:submissionId",
+  "/problems/:id",
   authenticate,
-  problemController.getSubmissionById.bind(problemController)
+  problemController.getProblemById.bind(problemController)
 );
 
-// public routes
+router.delete(
+  "/problems/:id",
+  authenticate,
+  problemController.deleteProblem.bind(problemController)
+);
+
+/* ======================
+   PUBLIC ROUTES
+   ====================== */
+
 router.get(
   "/problems",
   problemController.getAllProblems.bind(problemController)

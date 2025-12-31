@@ -12,8 +12,7 @@ export const buttonVariants = cva(
           "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+        ghost: " hover:bg-accent/10 hover:text-accent-foreground dark:hover:bg-accent/10 dark:hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         auth: "bg-primary rounded-md text-primary-foreground font-semibold shadow-lg hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/20 active:scale-[0.98] disabled:bg-muted disabled:text-muted-foreground",
       },
@@ -31,4 +30,4 @@ export const buttonVariants = cva(
       size: "default",
     },
   }
-)
+);
